@@ -2,30 +2,42 @@ package main
 
 import (
 	"flag"
-	"github.com/KirkDiggler/dnd-bot-go/discordbot"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/KirkDiggler/dnd-bot-go/discordbot"
 )
 
 var (
-	token = flag.String("token", "", "Bot token")
+	token   string
+	guildID string
 )
+
+func init() {
+	flag.StringVar(&token, "t", "",
+		"Bot token")
+	flag.StringVar(&guildID, "g", "",
+		"Guild ID")
+}
 
 func main() {
 	flag.Parse()
-	if token == nil {
-		panic("Token is required")
+
+	if token == "" {
+		flag.Usage()
+		return
 	}
 
-	if *token == "" {
+	if guildID == "" {
 		flag.Usage()
 		return
 	}
 
 	bot, err := discordbot.New(&discordbot.Config{
-		Token: *token,
+		Token:   token,
+		GuildID: guildID,
 	})
 	if err != nil {
 		panic(err)
@@ -35,15 +47,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer bot.Close()
+
+	defer func(bot discordbot.Interface) {
+		err := bot.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(bot)
 
 	stchan := make(chan os.Signal, 1)
 	signal.Notify(stchan, syscall.SIGTERM, os.Interrupt, syscall.SIGSEGV)
-end:
+
 	for {
 		select {
 		case <-stchan:
-			break end
+			return
 		default:
 		}
 		time.Sleep(time.Second)
