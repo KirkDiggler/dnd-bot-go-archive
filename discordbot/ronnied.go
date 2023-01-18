@@ -31,11 +31,15 @@ func (b *bot) processRonnieD(s *discordgo.Session, i *discordgo.InteractionCreat
 		"Ronnie D says: Pass a drink",
 		"Ronnie D says: Social!",
 	}
-	log.Println("running ronnied")
+
+	result := grabBag[rand.Intn(len(grabBag)-1)]
+	
+	log.Printf("%s used ronnied and got %s", i.Member.User.Username, result)
+
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: grabBag[rand.Intn(len(grabBag)-1)],
+			Content: result,
 		},
 	})
 	if err != nil {

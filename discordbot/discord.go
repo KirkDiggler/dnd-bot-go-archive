@@ -3,6 +3,9 @@ package discordbot
 import (
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
+
 	"github.com/KirkDiggler/dnd-bot-go/errors"
 	"github.com/bwmarrin/discordgo"
 )
@@ -12,16 +15,23 @@ type bot struct {
 	guildID string
 
 	registeredCommands []*discordgo.ApplicationCommand
+	characterComponent *character.Component
 }
 
 type Config struct {
 	Token   string
 	GuildID string
+	AppID   string
+	Client  dnd5e.Interface
 }
 
 func New(cfg *Config) (*bot, error) {
 	if cfg == nil {
 		return nil, errors.NewMissingParameterError("cfg")
+	}
+
+	if cfg.Client == nil {
+		return nil, errors.NewMissingParameterError("cfg.Client")
 	}
 
 	if cfg.Token == "" {
@@ -32,15 +42,31 @@ func New(cfg *Config) (*bot, error) {
 		return nil, errors.NewMissingParameterError("cfg.GuildID")
 	}
 
+	if cfg.AppID == "" {
+		return nil, errors.NewMissingParameterError("cfg.AppID")
+	}
 	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		return nil, err
 	}
 
+	session.Identify.Intents |= discordgo.IntentGuildMembers
+	session.Identify.Intents |= discordgo.IntentsGuilds
+	session.Identify.Intents |= discordgo.IntentsGuildMessageReactions
+	component, err := character.New(&character.Config{
+		Client:  cfg.Client,
+		Session: session,
+		AppID:   cfg.AppID,
+		GuildID: cfg.GuildID,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &bot{
 		session:            session,
 		guildID:            cfg.GuildID,
 		registeredCommands: make([]*discordgo.ApplicationCommand, 0),
+		characterComponent: component,
 	}, nil
 }
 
@@ -51,9 +77,10 @@ func (b *bot) Start() error {
 
 	err := b.session.Open()
 
-	b.session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
-	})
+	err = b.characterComponent.Load(b.session)
+	if err != nil {
+		return err
+	}
 
 	err = b.addRonnieDCommand()
 	if err != nil {
