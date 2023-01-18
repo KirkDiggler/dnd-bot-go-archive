@@ -2,30 +2,51 @@ package main
 
 import (
 	"flag"
-	"github.com/KirkDiggler/dnd-bot-go/discordbot"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
+
+	"github.com/KirkDiggler/dnd-bot-go/discordbot"
 )
 
 var (
-	token = flag.String("token", "", "Bot token")
+	token   string
+	guildID string
+	appID   string
 )
 
-func main() {
-	flag.Parse()
-	if token == nil {
-		panic("Token is required")
-	}
+func init() {
+	flag.StringVar(&token, "token", "",
+		"Bot token")
+	flag.StringVar(&guildID, "guild", "",
+		"Guild ID")
+	flag.StringVar(&appID, "app", "",
+		"Application ID")
 
-	if *token == "" {
+	flag.Parse()
+}
+
+func main() {
+	if token == "" || guildID == "" || appID == "" {
 		flag.Usage()
 		return
 	}
+	dnd5eClient, err := dnd5e.New(&dnd5e.Config{
+		HttpClient: http.DefaultClient,
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	bot, err := discordbot.New(&discordbot.Config{
-		Token: *token,
+		Token:   token,
+		GuildID: guildID,
+		AppID:   appID,
+		Client:  dnd5eClient,
 	})
 	if err != nil {
 		panic(err)
@@ -35,15 +56,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer bot.Close()
+
+	defer func(bot discordbot.Interface) {
+		err := bot.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(bot)
 
 	stchan := make(chan os.Signal, 1)
 	signal.Notify(stchan, syscall.SIGTERM, os.Interrupt, syscall.SIGSEGV)
-end:
+
 	for {
 		select {
 		case <-stchan:
-			break end
+			return
 		default:
 		}
 		time.Sleep(time.Second)
