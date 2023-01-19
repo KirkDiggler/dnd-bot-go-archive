@@ -48,7 +48,7 @@ func (s *partySuite) SetupTest() {
 }
 
 func (s *partySuite) TestGetParty() {
-	s.redisMock.ExpectGet("1234").SetVal(s.jsonPayload)
+	s.redisMock.ExpectGet(s.token).SetVal(s.jsonPayload)
 
 	result, err := s.fixture.GetParty(s.ctx, s.token)
 	s.NoError(err)
@@ -58,12 +58,12 @@ func (s *partySuite) TestGetParty() {
 }
 
 func (s *partySuite) TestGetPartyNotFound() {
-	s.redisMock.ExpectGet("1234").SetErr(redis.Nil)
+	s.redisMock.ExpectGet("notfound").SetErr(redis.Nil)
 
-	result, err := s.fixture.GetParty(s.ctx, "1234")
+	result, err := s.fixture.GetParty(s.ctx, "notfound")
 	s.Error(err)
 	s.Nil(result)
-	s.EqualError(err, dnderr.NewNotFoundError("token: 1234 not found").Error())
+	s.EqualError(err, dnderr.NewNotFoundError("token: notfound not found").Error())
 }
 
 func (s *partySuite) TestGetPartyError() {
