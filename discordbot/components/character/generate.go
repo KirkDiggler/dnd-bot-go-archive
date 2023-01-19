@@ -10,7 +10,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/poll"
 
-	"github.com/KirkDiggler/dnd-bot-go/errors"
+	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-go/entities"
@@ -62,23 +62,23 @@ func newChoiceOptions() *choiceOptions {
 
 func New(cfg *Config) (*Component, error) {
 	if cfg == nil {
-		return nil, errors.NewMissingParameterError("cfg")
+		return nil, dnderr.NewMissingParameterError("cfg")
 	}
 
 	if cfg.Client == nil {
-		return nil, errors.NewMissingParameterError("cfg.Client")
+		return nil, dnderr.NewMissingParameterError("cfg.Client")
 	}
 
 	if cfg.Session == nil {
-		return nil, errors.NewMissingParameterError("cfg.Session")
+		return nil, dnderr.NewMissingParameterError("cfg.Session")
 	}
 
 	if cfg.AppID == "" {
-		return nil, errors.NewMissingParameterError("cfg.AppID")
+		return nil, dnderr.NewMissingParameterError("cfg.AppID")
 	}
 
 	if cfg.GuildID == "" {
-		return nil, errors.NewMissingParameterError("cfg.GuildID")
+		return nil, dnderr.NewMissingParameterError("cfg.GuildID")
 	}
 
 	return &Component{

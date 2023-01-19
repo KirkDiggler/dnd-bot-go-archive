@@ -6,7 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
 
-	"github.com/KirkDiggler/dnd-bot-go/errors"
+	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -27,23 +27,23 @@ type Config struct {
 
 func New(cfg *Config) (*bot, error) {
 	if cfg == nil {
-		return nil, errors.NewMissingParameterError("cfg")
+		return nil, dnderr.NewMissingParameterError("cfg")
 	}
 
 	if cfg.Client == nil {
-		return nil, errors.NewMissingParameterError("cfg.Client")
+		return nil, dnderr.NewMissingParameterError("cfg.Client")
 	}
 
 	if cfg.Token == "" {
-		return nil, errors.NewMissingParameterError("cfg.Token")
+		return nil, dnderr.NewMissingParameterError("cfg.Token")
 	}
 
 	if cfg.GuildID == "" {
-		return nil, errors.NewMissingParameterError("cfg.GuildID")
+		return nil, dnderr.NewMissingParameterError("cfg.GuildID")
 	}
 
 	if cfg.AppID == "" {
-		return nil, errors.NewMissingParameterError("cfg.AppID")
+		return nil, dnderr.NewMissingParameterError("cfg.AppID")
 	}
 	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {

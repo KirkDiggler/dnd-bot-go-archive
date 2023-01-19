@@ -5,7 +5,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-go/entities"
 
-	"github.com/KirkDiggler/dnd-bot-go/errors"
+	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
 )
 
@@ -19,7 +19,7 @@ type Config struct {
 
 func New(cfg *Config) (Interface, error) {
 	if cfg == nil {
-		return nil, errors.NewMissingParameterError("cfg")
+		return nil, dnderr.NewMissingParameterError("cfg")
 	}
 
 	dndClient, err := dnd5e.NewDND5eAPI(&dnd5e.DND5eAPIConfig{
