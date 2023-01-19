@@ -2,6 +2,7 @@ package party
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -10,18 +11,21 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/types"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
-	"github.com/go-redis/redis/v8"
-	"github.com/go-redis/redismock/v8"
+	"github.com/go-redis/redis/v9"
+	"github.com/go-redis/redismock/v9"
 	"github.com/stretchr/testify/suite"
 )
 
 type partySuite struct {
 	suite.Suite
 
-	ctx        context.Context
-	fixture    *redisRepo
-	redisMock  redismock.ClientMock
-	mockUuider *types.MockUUID
+	ctx         context.Context
+	fixture     *redisRepo
+	redisMock   redismock.ClientMock
+	mockUuider  *types.MockUUID
+	token       string
+	party       *entities.Party
+	jsonPayload string
 }
 
 func (s *partySuite) SetupTest() {
@@ -29,7 +33,14 @@ func (s *partySuite) SetupTest() {
 	client, redisMock := redismock.NewClientMock()
 	s.redisMock = redisMock
 	s.mockUuider = &types.MockUUID{}
-
+	s.party = &entities.Party{
+		Name:      "Test Party",
+		PartySize: 5,
+		Token:     "1234",
+	}
+	s.token = "1234"
+	jsonString, _ := json.Marshal(s.party)
+	s.jsonPayload = string(jsonString)
 	s.fixture = &redisRepo{
 		client: client,
 		uuider: s.mockUuider,
@@ -37,16 +48,13 @@ func (s *partySuite) SetupTest() {
 }
 
 func (s *partySuite) TestGetParty() {
-	jsonString := `{"name":"Test Party","party_size":5, "token":"1234"}`
+	s.redisMock.ExpectGet("1234").SetVal(s.jsonPayload)
 
-	s.redisMock.ExpectGet("token").SetVal(jsonString)
-
-	result, err := s.fixture.GetParty(s.ctx, "token")
+	result, err := s.fixture.GetParty(s.ctx, s.token)
 	s.NoError(err)
 	s.NotNil(result)
-	s.Equal("Test Party", result.Name)
-	s.Equal(5, result.PartySize)
-	s.Equal("1234", result.Token)
+	s.Equal(s.party, result)
+
 }
 
 func (s *partySuite) TestGetPartyNotFound() {
@@ -68,8 +76,8 @@ func (s *partySuite) TestGetPartyError() {
 }
 
 func (s *partySuite) TestCreateParty() {
-	s.redisMock.ExpectSet("party:12345", `{"party_size":5,"name":"Test Party","token":"12345"}`, 0).SetVal("OK")
-	s.mockUuider.On("New").Return("12345")
+	s.redisMock.ExpectSet(getPartyKey(s.token), s.jsonPayload, 0).SetVal("OK")
+	s.mockUuider.On("New").Return(s.token)
 
 	result, err := s.fixture.CreateParty(s.ctx, &entities.Party{
 		PartySize: 5,
@@ -78,14 +86,12 @@ func (s *partySuite) TestCreateParty() {
 
 	s.NoError(err)
 	s.NotNil(result)
-	s.Equal("Test Party", result.Name)
-	s.Equal(5, result.PartySize)
-	s.Equal("12345", result.Token)
+	s.Equal(s.party, result)
 }
 
 func (s *partySuite) TestCreatePartyError() {
-	s.redisMock.ExpectSet("party:12345", `{"party_size":5,"name":"Test Party","token":"12345"}`, 0).SetErr(errors.New("test error"))
-	s.mockUuider.On("New").Return("12345")
+	s.redisMock.ExpectSet(getPartyKey(s.token), s.jsonPayload, 0).SetErr(errors.New("test error"))
+	s.mockUuider.On("New").Return(s.token)
 
 	result, err := s.fixture.CreateParty(s.ctx, &entities.Party{
 		PartySize: 5,
