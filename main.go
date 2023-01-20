@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+
 	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
 	"github.com/go-redis/redis/v9"
 
@@ -47,21 +49,31 @@ func main() {
 		panic(err)
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: redistHost,
+	})
+
 	partyRepo, err := party.New(&party.Config{
-		Client: redis.NewClient(&redis.Options{
-			Addr: redistHost,
-		}),
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	charRepo, err := character.New(&character.Config{
+		Client: redisClient,
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	bot, err := discordbot.New(&discordbot.Config{
-		Token:     token,
-		GuildID:   guildID,
-		AppID:     appID,
-		Client:    dnd5eClient,
-		PartyRepo: partyRepo,
+		Token:         token,
+		GuildID:       guildID,
+		AppID:         appID,
+		Client:        dnd5eClient,
+		PartyRepo:     partyRepo,
+		CharacterRepo: charRepo,
 	})
 	if err != nil {
 		panic(err)

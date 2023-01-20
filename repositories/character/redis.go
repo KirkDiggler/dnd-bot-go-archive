@@ -32,13 +32,16 @@ func New(cfg *Config) (Repository, error) {
 		uuider: &types.GoogleUUID{},
 	}, nil
 }
+func getCharacterKey(id string) string {
+	return fmt.Sprintf("character:%s", id)
+}
 
 func (r *redisRepo) GetCharacter(ctx context.Context, id string) (*Data, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
 
-	result := r.client.Get(ctx, id)
+	result := r.client.Get(ctx, getCharacterKey(id))
 	if result.Err() != nil {
 		if result.Err() == redis.Nil {
 			return nil, dnderr.NewNotFoundError(fmt.Sprintf("character id not found: %s", id))
@@ -57,7 +60,7 @@ func (r *redisRepo) CreateCharacter(ctx context.Context, character *Data) (*Data
 
 	character.ID = r.uuider.New()
 
-	result := r.client.Set(ctx, character.ID, dataToJSON(character), 0)
+	result := r.client.Set(ctx, getCharacterKey(character.ID), dataToJSON(character), 0)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
