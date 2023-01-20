@@ -17,8 +17,9 @@ type bot struct {
 	appID              string
 	registeredCommands []*discordgo.ApplicationCommand
 
-	partyRepo      party.Interface
-	partyComponent *components.Party
+	partyRepo          party.Interface
+	partyComponent     *components.Party
+	characterComponent *components.Character
 }
 
 type Config struct {
@@ -64,14 +65,20 @@ func New(cfg *Config) (*bot, error) {
 	session.Identify.Intents |= discordgo.IntentsGuildMessageReactions
 
 	partyComponent, err := components.NewParty(&components.PartyConfig{
-		AppID:     cfg.AppID,
-		GuildID:   cfg.GuildID,
 		Session:   session,
 		PartyRepo: cfg.PartyRepo,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	characterComponent, err := components.NewCharacter(&components.CharacterConfig{
+		Client: cfg.Client,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &bot{
 		session:            session,
 		appID:              cfg.AppID,
@@ -79,6 +86,7 @@ func New(cfg *Config) (*bot, error) {
 		registeredCommands: make([]*discordgo.ApplicationCommand, 0),
 		partyRepo:          cfg.PartyRepo,
 		partyComponent:     partyComponent,
+		characterComponent: characterComponent,
 	}, nil
 }
 
@@ -99,12 +107,16 @@ func (b *bot) Start() error {
 		return err
 	}
 
-	b.session.AddHandler(b.partyComponent.HandleInteraction)
+	b.session.AddHandler(b.partyComponent.HandleInteractionCreate)
 
 	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, b.partyComponent.GetApplicationCommand())
 	if err != nil {
 		return err
 	}
+
+	b.session.AddHandler(b.characterComponent.HandleInteractionCreate)
+
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, b.characterComponent.GetApplicationCommand())
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const ronnieRollBack = "ronnie-roll-back"
+
 type RonnieD struct {
 }
 
@@ -33,7 +35,10 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 							&discordgo.Button{
 								Label:    "Roll it back",
 								Style:    discordgo.SuccessButton,
-								CustomID: "roll",
+								CustomID: ronnieRollBack,
+								Emoji: discordgo.ComponentEmoji{
+									Name: "🍺",
+								},
 							},
 						},
 					},
@@ -54,10 +59,10 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 						Components: []discordgo.MessageComponent{
 							&discordgo.Button{
 								Label:    "Roll it back",
-								Style:    discordgo.PrimaryButton,
-								CustomID: "ronnied-roll-back",
+								Style:    discordgo.DangerButton,
+								CustomID: ronnieRollBack,
 								Emoji: discordgo.ComponentEmoji{
-									Name: "🎲",
+									Name: "🍺",
 								},
 							},
 						},
@@ -115,7 +120,7 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 		}
 	case discordgo.InteractionMessageComponent:
 		switch i.MessageComponentData().CustomID {
-		case "ronnied-roll-back":
+		case ronnieRollBack:
 			c.RonnieRoll(s, i)
 		}
 	}

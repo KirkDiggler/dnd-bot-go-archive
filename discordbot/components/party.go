@@ -15,17 +15,12 @@ import (
 
 type Party struct {
 	// contains filtered or unexported fields
-	appID             string
-	guildID           string
-	session           *discordgo.Session
 	partyRepo         party.Interface
 	componentHandlers map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)
 	commandHandlers   map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)
 }
 
 type PartyConfig struct {
-	AppID     string
-	GuildID   string
 	Session   *discordgo.Session
 	PartyRepo party.Interface
 }
@@ -39,12 +34,7 @@ func NewParty(cfg *PartyConfig) (*Party, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.PartyRepo")
 	}
 
-	if cfg.Session == nil {
-		return nil, dnderr.NewMissingParameterError("cfg.Session")
-	}
-
 	return &Party{
-		session:           cfg.Session,
 		partyRepo:         cfg.PartyRepo,
 		componentHandlers: make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)),
 		commandHandlers:   getCommandHandlers(),
@@ -112,7 +102,7 @@ func (c *Party) GetApplicationCommand() *discordgo.ApplicationCommand {
 	}
 }
 
-func (c *Party) HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *Party) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		if handler, ok := c.commandHandlers[i.ApplicationCommandData().Name]; ok {
