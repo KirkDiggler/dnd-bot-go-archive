@@ -1,14 +1,14 @@
 package components
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/poll"
+	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 
@@ -17,33 +17,22 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const selectCaracterAction = "select-character"
+
 type Character struct {
-	client        dnd5e.Interface
-	choices       []*charChoice
-	choiceOptions *choiceOptions
-	poll          *poll.Poll
+	client   dnd5e.Interface
+	charRepo character.Repository
 }
 
 type CharacterConfig struct {
-	Client dnd5e.Interface
+	Client        dnd5e.Interface
+	CharacterRepo character.Repository
 }
 
 type charChoice struct {
 	Name  string
 	Race  *entities.Race
 	Class *entities.Class
-}
-
-type choiceOptions struct {
-	Races   []*entities.Race
-	Classes []*entities.Class
-}
-
-func newChoiceOptions() *choiceOptions {
-	return &choiceOptions{
-		Races:   make([]*entities.Race, 0),
-		Classes: make([]*entities.Class, 0),
-	}
 }
 
 func NewCharacter(cfg *CharacterConfig) (*Character, error) {
@@ -55,24 +44,27 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.Client")
 	}
 
+	if cfg.CharacterRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.CharacterRepo")
+	}
 	return &Character{
-		client:        cfg.Client,
-		choiceOptions: newChoiceOptions(),
-		poll:          poll.New(),
+		client:   cfg.Client,
+		charRepo: cfg.CharacterRepo,
 	}, nil
 }
 
-func (c *Character) startNewChoices(number int) error {
+func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
+	// TODO cache these. cache in the client wrapper? configurable?
 	races, err := c.client.ListRaces()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	classes, err := c.client.ListClasses()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Println("Starting new choices")
+	log.Println("Starting new choices")
 	choices := make([]*charChoice, number)
 
 	rand.Seed(time.Now().UnixNano())
@@ -83,10 +75,7 @@ func (c *Character) startNewChoices(number int) error {
 		}
 	}
 
-	c.choices = choices
-	c.poll = poll.New()
-
-	return nil
+	return choices, nil
 }
 
 func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
@@ -97,6 +86,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 			{
 				Name:        "random",
 				Description: "Create a new character from a random list",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "load",
+				Description: "Load your character",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
@@ -111,47 +104,65 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			switch i.ApplicationCommandData().Options[0].Name {
 			case "random":
 				c.handleRandomStart(s, i)
+			case "load":
+				c.handleLoadCharacter(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
 		switch i.MessageComponentData().CustomID {
-		case "vote-choice":
-			c.handleVote(s, i)
+		case selectCaracterAction:
+			c.handleCharSelect(s, i)
 		}
 	}
 }
+func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charRepo.GetCharacter(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
 
-func (c *Character) handleVote(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	idxstring := strings.Replace(i.MessageComponentData().Values[0], "choice-", "", 1)
-	idx, err := strconv.Atoi(idxstring)
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Loaded character %s the %s %s", char.Name, char.RaceKey, char.ClassKey),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	if len(c.choices) < idx {
-		log.Println("Index out of range")
+}
+
+func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	selectString := strings.Split(i.MessageComponentData().Values[0], ":")
+	if len(selectString) != 4 {
+		log.Printf("Invalid select string: %s", selectString)
 		return
 	}
 
-	c.poll.Vote(i.Member.User.ID, idx)
-	pollResults := c.poll.GetVotes()
-	msgBuilder := strings.Builder{}
-	println(fmt.Sprintf("Total votes: %v", pollResults))
+	race := selectString[2]
+	class := selectString[3]
 
-	for idx, choice := range c.choices {
-		vote := 0
-		if v, ok := pollResults[idx]; ok {
-			vote = v
-		}
-
-		msgBuilder.WriteString(fmt.Sprintf("%s the %s %s %d votes\n", choice.Name, choice.Race.Name, choice.Class.Name, vote))
+	char, err := c.charRepo.CreateCharacter(context.Background(), &character.Data{
+		OwnerID:  i.Member.User.ID,
+		Name:     i.Member.User.Username,
+		RaceKey:  race,
+		ClassKey: class,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: msgBuilder.String(),
+			Content: fmt.Sprintf("Created character %s", char.ID),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -159,36 +170,35 @@ func (c *Character) handleVote(s *discordgo.Session, i *discordgo.InteractionCre
 		log.Println(err)
 		return
 	}
-
 }
 
 func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	err := c.startNewChoices(4)
+	log.Println("handleRandomStart called")
+	choices, err := c.startNewChoices(4)
 	if err != nil {
 		log.Println(err)
 		// TODO: Handle error
 		return
 	}
 
-	components := make([]discordgo.SelectMenuOption, len(c.choices))
-	for idx, char := range c.choices {
+	components := make([]discordgo.SelectMenuOption, len(choices))
+	for idx, char := range choices {
 		components[idx] = discordgo.SelectMenuOption{
 			Label: fmt.Sprintf("%s the %s %s", i.Member.User.Username, char.Race.Name, char.Class.Name),
-			Value: fmt.Sprintf("choice-%d", idx),
+			Value: fmt.Sprintf("choice:%d:%s:%s", idx, char.Race.Key, char.Class.Key),
 		}
 	}
-
-	println("generate start handler")
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Place your vote for the next character:",
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Select your new character:",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.SelectMenu{
 							// Select menu, as other components, must have a customID, so we set it to this value.
-							CustomID:    "vote-choice",
+							CustomID:    selectCaracterAction,
 							Placeholder: "This is the tale of...👇",
 							Options:     components,
 						},
@@ -196,7 +206,8 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 				},
 			},
 		},
-	})
+	}
+	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		fmt.Println(err)
 	}

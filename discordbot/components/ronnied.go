@@ -23,9 +23,10 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 	rand.Seed(time.Now().UnixNano())
 	roll := rand.Intn(6) + 1
 	msgBuilder := strings.Builder{}
+	var response *discordgo.InteractionResponse
 	if roll == 6 {
 		msgBuilder.WriteString("Crit! Pass a drink")
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: msgBuilder.String(),
@@ -44,13 +45,10 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 					},
 				},
 			},
-		})
-		if err != nil {
-			log.Println(err)
 		}
 	} else if roll == 1 {
 		msgBuilder.WriteString("rolled a 1, that's a drink!")
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: msgBuilder.String(),
@@ -69,22 +67,20 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 					},
 				},
 			},
-		})
-		if err != nil {
-			log.Println(err)
 		}
 	} else {
 		msgBuilder.WriteString("You rolled a ")
 		msgBuilder.WriteString(strconv.Itoa(roll))
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: msgBuilder.String(),
 			},
-		})
-		if err != nil {
-			log.Println(err)
 		}
+	}
+	err := s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Print(err)
 	}
 }
 

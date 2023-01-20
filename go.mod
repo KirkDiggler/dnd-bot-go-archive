@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/bwmarrin/discordgo v0.26.1
-	github.com/fadedpez/dnd5e-api v0.0.0-20230104060115-de76cced6db8
+	github.com/fadedpez/dnd5e-api v0.0.0-20230120041029-277bd33b5802
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
 	github.com/go-redis/redismock/v9 v9.0.0-rc.2
 	github.com/google/uuid v1.3.0
