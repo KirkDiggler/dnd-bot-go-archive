@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
@@ -17,7 +19,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const selectCaracterAction = "select-character"
+const (
+	selectCaracterAction = "select-character"
+	rollCharacterAction  = "roll-character"
+)
 
 type Character struct {
 	client      dnd5e.Client
@@ -51,31 +56,6 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 		client:      cfg.Client,
 		charManager: cfg.CharacterRepo,
 	}, nil
-}
-
-func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
-	// TODO cache these. cache in the client wrapper? configurable?
-	races, err := c.client.ListRaces()
-	if err != nil {
-		return nil, err
-	}
-
-	classes, err := c.client.ListClasses()
-	if err != nil {
-		return nil, err
-	}
-	log.Println("Starting new choices")
-	choices := make([]*charChoice, number)
-
-	rand.Seed(time.Now().UnixNano())
-	for idx := 0; idx < 4; idx++ {
-		choices[idx] = &charChoice{
-			Race:  races[rand.Intn(len(races))],
-			Class: classes[rand.Intn(len(classes))],
-		}
-	}
-
-	return choices, nil
 }
 
 func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
@@ -112,9 +92,12 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		switch i.MessageComponentData().CustomID {
 		case selectCaracterAction:
 			c.handleCharSelect(s, i)
+		case rollCharacterAction:
+			c.handleRollCharacter(s, i)
 		}
 	}
 }
+
 func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
@@ -173,11 +156,107 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 		Data: &discordgo.InteractionResponseData{
 			Content: fmt.Sprintf("Created character %s", char.ID),
 			Flags:   discordgo.MessageFlagsEphemeral,
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Roll Character",
+							Style:    discordgo.SuccessButton,
+							CustomID: rollCharacterAction,
+							Emoji: discordgo.ComponentEmoji{
+								Name: "🎲",
+							},
+						},
+					},
+				},
+			},
 		},
 	})
 	if err != nil {
 		log.Println(err)
 		return
+	}
+}
+
+func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	rolls, err := rollAttributes()
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	components := make([]discordgo.SelectMenuOption, len(rolls))
+	for idx, roll := range rolls {
+		components[idx] = discordgo.SelectMenuOption{
+			Label: fmt.Sprintf("%v  %d", roll.Details, roll.Roll),
+			Value: fmt.Sprintf("roll:%d:%d", roll.Index, roll.Roll),
+		}
+	}
+
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Assign your rolls to your stats",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						&discordgo.SelectMenu{
+							Placeholder: "DEX",
+							CustomID:    fmt.Sprintf("%s:DEX", selectCaracterAction),
+							Options:     components,
+						},
+						&discordgo.SelectMenu{
+							Placeholder: "STR",
+							CustomID:    fmt.Sprintf("%s:STR", selectCaracterAction),
+							Options:     components,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						&discordgo.SelectMenu{
+							Placeholder: "WIS",
+							CustomID:    fmt.Sprintf("%s:WIS", selectCaracterAction),
+							Options:     components,
+						},
+						&discordgo.SelectMenu{
+							Placeholder: "INT",
+							CustomID:    fmt.Sprintf("%s:INT", selectCaracterAction),
+							Options:     components,
+						},
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								&discordgo.SelectMenu{
+									Placeholder: "CON",
+									CustomID:    fmt.Sprintf("%s:CON", selectCaracterAction),
+									Options:     components,
+								},
+								&discordgo.SelectMenu{
+									Placeholder: "CHAR",
+									CustomID:    fmt.Sprintf("%s:CHAR", selectCaracterAction),
+									Options:     components,
+								},
+							},
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						&discordgo.Button{
+							Label:    "Save",
+							CustomID: fmt.Sprintf("%s:save", selectCaracterAction),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
 	}
 }
 
@@ -221,4 +300,52 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		fmt.Println(err)
 	}
 
+}
+
+func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
+	// TODO cache these. cache in the client wrapper? configurable?
+	races, err := c.client.ListRaces()
+	if err != nil {
+		return nil, err
+	}
+
+	classes, err := c.client.ListClasses()
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Starting new choices")
+	choices := make([]*charChoice, number)
+
+	rand.Seed(time.Now().UnixNano())
+	for idx := 0; idx < 4; idx++ {
+		choices[idx] = &charChoice{
+			Race:  races[rand.Intn(len(races))],
+			Class: classes[rand.Intn(len(classes))],
+		}
+	}
+
+	return choices, nil
+}
+
+type rollResult struct {
+	Index   int
+	Roll    int
+	Details []int
+}
+
+func rollAttributes() ([]*rollResult, error) {
+	attributes := make([]*rollResult, 6)
+
+	for idx := range attributes {
+		roll, err := dice.Roll("4d6")
+		if err != nil {
+			return nil, err
+		}
+		attributes[idx] = &rollResult{
+			Index:   idx,
+			Roll:    roll.Total - roll.Lowest,
+			Details: roll.Details,
+		}
+	}
+	return attributes, nil
 }
