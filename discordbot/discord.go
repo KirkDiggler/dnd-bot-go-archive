@@ -3,7 +3,8 @@ package discordbot
 import (
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
@@ -29,7 +30,7 @@ type Config struct {
 	AppID         string
 	Client        dnd5e.Client
 	PartyRepo     party.Interface
-	CharacterRepo character.Repository
+	CharacterRepo characters.Manager
 }
 
 func New(cfg *Config) (*bot, error) {
