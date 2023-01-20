@@ -160,8 +160,11 @@ func (c *Component) Load(s *discordgo.Session) error {
 		Name:        "generate",
 		Description: "Generate a random list of characters to choose from",
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func (c *Component) VoteChoiceHandler() func(s *discordgo.Session, i *discordgo.InteractionCreate) {

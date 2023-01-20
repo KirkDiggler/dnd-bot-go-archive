@@ -3,26 +3,30 @@ package discordbot
 import (
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components"
+	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
 
+	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/bwmarrin/discordgo"
 )
 
 type bot struct {
-	session *discordgo.Session
-	guildID string
-
+	session            *discordgo.Session
+	guildID            string
+	appID              string
 	registeredCommands []*discordgo.ApplicationCommand
-	characterComponent *character.Component
+
+	partyRepo      party.Interface
+	partyComponent *components.Party
 }
 
 type Config struct {
-	Token   string
-	GuildID string
-	AppID   string
-	Client  dnd5e.Interface
+	Token     string
+	GuildID   string
+	AppID     string
+	Client    dnd5e.Interface
+	PartyRepo party.Interface
 }
 
 func New(cfg *Config) (*bot, error) {
@@ -45,6 +49,11 @@ func New(cfg *Config) (*bot, error) {
 	if cfg.AppID == "" {
 		return nil, dnderr.NewMissingParameterError("cfg.AppID")
 	}
+
+	if cfg.PartyRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.PartyRepo")
+	}
+
 	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		return nil, err
@@ -53,20 +62,23 @@ func New(cfg *Config) (*bot, error) {
 	session.Identify.Intents |= discordgo.IntentGuildMembers
 	session.Identify.Intents |= discordgo.IntentsGuilds
 	session.Identify.Intents |= discordgo.IntentsGuildMessageReactions
-	component, err := character.New(&character.Config{
-		Client:  cfg.Client,
-		Session: session,
-		AppID:   cfg.AppID,
-		GuildID: cfg.GuildID,
+
+	partyComponent, err := components.NewParty(&components.PartyConfig{
+		AppID:     cfg.AppID,
+		GuildID:   cfg.GuildID,
+		Session:   session,
+		PartyRepo: cfg.PartyRepo,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &bot{
 		session:            session,
+		appID:              cfg.AppID,
 		guildID:            cfg.GuildID,
 		registeredCommands: make([]*discordgo.ApplicationCommand, 0),
-		characterComponent: component,
+		partyRepo:          cfg.PartyRepo,
+		partyComponent:     partyComponent,
 	}, nil
 }
 
@@ -75,44 +87,37 @@ func (b *bot) Start() error {
 		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
-	err := b.session.Open()
-
-	err = b.characterComponent.Load(b.session)
+	ronnied, err := components.NewRonnieD()
 	if err != nil {
 		return err
 	}
 
-	err = b.addRonnieDCommand()
+	b.session.AddHandler(ronnied.HandleInteractionCreate)
+
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, ronnied.GetApplicationCommand())
 	if err != nil {
-		log.Print(err)
 		return err
 	}
 
-	b.session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		if m.Content == "ping" {
-			msg, err := s.ChannelMessageSend(m.ChannelID, "Pong!")
-			if err != nil {
-				log.Println(err)
-			}
-			log.Println(msg)
-		}
-	})
+	b.session.AddHandler(b.partyComponent.HandleInteraction)
 
-	b.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		switch i.Type {
-		case discordgo.InteractionApplicationCommand:
-			switch i.ApplicationCommandData().Name {
-			case "ronnied":
-				b.processRonnieD(s, i)
-			}
-		}
-	})
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, b.partyComponent.GetApplicationCommand())
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	err = b.session.Open()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (b *bot) Close() error {
-
 	for _, v := range b.registeredCommands {
 		log.Printf("Removing command '%v'...", v.Name)
 

@@ -8,15 +8,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
+	"github.com/go-redis/redis/v9"
+
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 
 	"github.com/KirkDiggler/dnd-bot-go/discordbot"
 )
 
 var (
-	token   string
-	guildID string
-	appID   string
+	token      string
+	guildID    string
+	appID      string
+	redistHost string
 )
 
 func init() {
@@ -26,7 +30,8 @@ func init() {
 		"Guild ID")
 	flag.StringVar(&appID, "app", "",
 		"Application ID")
-
+	flag.StringVar(&redistHost, "redis", "localhost:6379",
+		"Redis host")
 	flag.Parse()
 }
 
@@ -42,11 +47,21 @@ func main() {
 		panic(err)
 	}
 
+	partyRepo, err := party.New(&party.Config{
+		Client: redis.NewClient(&redis.Options{
+			Addr: redistHost,
+		}),
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	bot, err := discordbot.New(&discordbot.Config{
-		Token:   token,
-		GuildID: guildID,
-		AppID:   appID,
-		Client:  dnd5eClient,
+		Token:     token,
+		GuildID:   guildID,
+		AppID:     appID,
+		Client:    dnd5eClient,
+		PartyRepo: partyRepo,
 	})
 	if err != nil {
 		panic(err)
