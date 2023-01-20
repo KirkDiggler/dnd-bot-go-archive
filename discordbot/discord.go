@@ -3,12 +3,12 @@ package discordbot
 import (
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
-	"github.com/KirkDiggler/dnd-bot-go/discordbot/components"
-	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/bwmarrin/discordgo"
 )
@@ -28,9 +28,9 @@ type Config struct {
 	Token         string
 	GuildID       string
 	AppID         string
-	Client        dnd5e.Interface
+	Client        dnd5e.Client
 	PartyRepo     party.Interface
-	CharacterRepo character.Repository
+	CharacterRepo characters.Manager
 }
 
 func New(cfg *Config) (*bot, error) {

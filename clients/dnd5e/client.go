@@ -3,12 +3,13 @@ package dnd5e
 import (
 	"net/http"
 
-	"github.com/KirkDiggler/dnd-bot-go/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
 )
 
+// TODO: add context to functions
 type client struct {
 	client dnd5e.Interface
 }
@@ -17,7 +18,7 @@ type Config struct {
 	HttpClient *http.Client
 }
 
-func New(cfg *Config) (Interface, error) {
+func New(cfg *Config) (Client, error) {
 	if cfg == nil {
 		return nil, dnderr.NewMissingParameterError("cfg")
 	}
@@ -50,4 +51,22 @@ func (c *client) ListRaces() ([]*entities.Race, error) {
 	}
 
 	return apiReferenceItemsToRaces(response), nil
+}
+
+func (c *client) GetRace(key string) (*entities.Race, error) {
+	response, err := c.client.GetRace(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiRaceToRace(response), nil
+}
+
+func (c *client) GetClass(key string) (*entities.Class, error) {
+	response, err := c.client.GetClass(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiClassToClass(response), nil
 }

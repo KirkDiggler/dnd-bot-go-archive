@@ -1,7 +1,7 @@
 package dnd5e
 
 import (
-	"github.com/KirkDiggler/dnd-bot-go/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 )
 
@@ -34,4 +34,18 @@ func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities.Ra
 	}
 
 	return output
+}
+
+func apiRaceToRace(input *apiEntities.Race) *entities.Race {
+	return &entities.Race{
+		Key:  input.Key,
+		Name: input.Name,
+	}
+}
+
+func apiClassToClass(input *apiEntities.Class) *entities.Class {
+	return &entities.Class{
+		Key:  input.Key,
+		Name: input.Name,
+	}
 }

@@ -8,9 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
+
 	"github.com/go-redis/redis/v9"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
@@ -67,13 +69,21 @@ func main() {
 		panic(err)
 	}
 
+	charManager, err := characters.New(&characters.Config{
+		Client:        dnd5eClient,
+		CharacterRepo: charRepo,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	bot, err := discordbot.New(&discordbot.Config{
 		Token:         token,
 		GuildID:       guildID,
 		AppID:         appID,
 		Client:        dnd5eClient,
 		PartyRepo:     partyRepo,
-		CharacterRepo: charRepo,
+		CharacterRepo: charManager,
 	})
 	if err != nil {
 		panic(err)

@@ -8,25 +8,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-go/entities"
 	"github.com/bwmarrin/discordgo"
 )
 
 const selectCaracterAction = "select-character"
 
 type Character struct {
-	client   dnd5e.Interface
-	charRepo character.Repository
+	client      dnd5e.Client
+	charManager characters.Manager
 }
 
 type CharacterConfig struct {
-	Client        dnd5e.Interface
-	CharacterRepo character.Repository
+	Client        dnd5e.Client
+	CharacterRepo characters.Manager
 }
 
 type charChoice struct {
@@ -48,8 +48,8 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.CharacterRepo")
 	}
 	return &Character{
-		client:   cfg.Client,
-		charRepo: cfg.CharacterRepo,
+		client:      cfg.Client,
+		charManager: cfg.CharacterRepo,
 	}, nil
 }
 
@@ -116,16 +116,21 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 	}
 }
 func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	char, err := c.charRepo.GetCharacter(context.Background(), i.Member.User.ID)
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
+		return // TODO handle error
+	}
+
+	if char.Race == nil || char.Class == nil {
+		log.Println("Character not fully loaded")
 		return // TODO handle error
 	}
 
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Loaded character %s the %s %s", char.Name, char.RaceKey, char.ClassKey),
+			Content: fmt.Sprintf("Loaded character %s the %s %s", char.Name, char.Race.Name, char.Class.Name),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	}
@@ -148,11 +153,15 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
-	char, err := c.charRepo.CreateCharacter(context.Background(), &character.Data{
-		OwnerID:  i.Member.User.ID,
-		Name:     i.Member.User.Username,
-		RaceKey:  race,
-		ClassKey: class,
+	char, err := c.charManager.Create(context.Background(), &entities.Character{
+		OwnerID: i.Member.User.ID,
+		Name:    i.Member.User.Username,
+		Race: &entities.Race{
+			Key: race,
+		},
+		Class: &entities.Class{
+			Key: class,
+		},
 	})
 	if err != nil {
 		log.Println(err)

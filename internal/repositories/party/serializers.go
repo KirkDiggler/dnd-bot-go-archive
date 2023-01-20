@@ -3,7 +3,7 @@ package party
 import (
 	"encoding/json"
 
-	"github.com/KirkDiggler/dnd-bot-go/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 )
 
 func jsonToParty(input string) *entities.Party {

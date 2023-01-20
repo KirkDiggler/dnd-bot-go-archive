@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-go/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
-	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
 	"github.com/bwmarrin/discordgo"
 )
 
