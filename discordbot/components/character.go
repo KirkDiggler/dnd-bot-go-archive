@@ -87,6 +87,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "random",
 				Description: "Create a new character from a random list",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "load",
+				Description: "Load your character",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -100,6 +104,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			switch i.ApplicationCommandData().Options[0].Name {
 			case "random":
 				c.handleRandomStart(s, i)
+			case "load":
+				c.handleLoadCharacter(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
@@ -108,6 +114,28 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			c.handleCharSelect(s, i)
 		}
 	}
+}
+func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charRepo.GetCharacter(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Loaded character %s the %s %s", char.Name, char.RaceKey, char.ClassKey),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 }
 
 func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -160,11 +188,11 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 			Value: fmt.Sprintf("choice:%d:%s:%s", idx, char.Race.Key, char.Class.Key),
 		}
 	}
-
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Place your vote for the next character:",
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Select your new character:",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
@@ -178,7 +206,8 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 				},
 			},
 		},
-	})
+	}
+	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		fmt.Println(err)
 	}
