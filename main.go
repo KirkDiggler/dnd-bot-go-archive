@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
 	"github.com/go-redis/redis/v9"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/KirkDiggler/dnd-bot-go/types"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
-	"github.com/KirkDiggler/dnd-bot-go/entities"
 	"github.com/go-redis/redis/v9"
 )
 

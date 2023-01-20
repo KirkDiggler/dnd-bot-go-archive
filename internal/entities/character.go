@@ -1,6 +1,8 @@
 package entities
 
-import "github.com/KirkDiggler/dnd-bot-go/repositories/character"
+import (
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+)
 
 type Character struct {
 	ID    string `json:"id"`

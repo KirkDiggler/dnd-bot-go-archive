@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/types"
+
 	"github.com/go-redis/redis/v9"
 
-	"github.com/KirkDiggler/dnd-bot-go/types"
 	"github.com/go-redis/redismock/v9"
 	"github.com/stretchr/testify/suite"
 )

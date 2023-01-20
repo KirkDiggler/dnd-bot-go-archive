@@ -3,7 +3,7 @@ package dnd5e
 import (
 	"net/http"
 
-	"github.com/KirkDiggler/dnd-bot-go/entities"
+	entities2 "github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
@@ -34,7 +34,7 @@ func New(cfg *Config) (Interface, error) {
 	}, nil
 }
 
-func (c *client) ListClasses() ([]*entities.Class, error) {
+func (c *client) ListClasses() ([]*entities2.Class, error) {
 	response, err := c.client.ListClasses()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (c *client) ListClasses() ([]*entities.Class, error) {
 	return apiReferenceItemsToClasses(response), nil
 }
 
-func (c *client) ListRaces() ([]*entities.Race, error) {
+func (c *client) ListRaces() ([]*entities2.Race, error) {
 	response, err := c.client.ListRaces()
 	if err != nil {
 		return nil, err

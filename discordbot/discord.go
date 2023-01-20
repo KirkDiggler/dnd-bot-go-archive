@@ -3,12 +3,11 @@ package discordbot
 import (
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
-
-	"github.com/KirkDiggler/dnd-bot-go/discordbot/components"
-	"github.com/KirkDiggler/dnd-bot-go/repositories/party"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/bwmarrin/discordgo"
 )

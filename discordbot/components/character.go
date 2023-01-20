@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-go/repositories/character"
+	entities2 "github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	character2 "github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-go/entities"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -21,18 +21,18 @@ const selectCaracterAction = "select-character"
 
 type Character struct {
 	client   dnd5e.Interface
-	charRepo character.Repository
+	charRepo character2.Repository
 }
 
 type CharacterConfig struct {
 	Client        dnd5e.Interface
-	CharacterRepo character.Repository
+	CharacterRepo character2.Repository
 }
 
 type charChoice struct {
 	Name  string
-	Race  *entities.Race
-	Class *entities.Class
+	Race  *entities2.Race
+	Class *entities2.Class
 }
 
 func NewCharacter(cfg *CharacterConfig) (*Character, error) {
@@ -148,7 +148,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
-	char, err := c.charRepo.CreateCharacter(context.Background(), &character.Data{
+	char, err := c.charRepo.CreateCharacter(context.Background(), &character2.Data{
 		OwnerID:  i.Member.User.ID,
 		Name:     i.Member.User.Username,
 		RaceKey:  race,
