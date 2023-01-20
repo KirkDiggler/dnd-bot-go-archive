@@ -1,37 +1,51 @@
 package dnd5e
 
 import (
-	entities2 "github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 )
 
-func apiReferenceItemToClass(apiClass *apiEntities.ReferenceItem) *entities2.Class {
-	return &entities2.Class{
+func apiReferenceItemToClass(apiClass *apiEntities.ReferenceItem) *entities.Class {
+	return &entities.Class{
 		Key:  apiClass.Key,
 		Name: apiClass.Name,
 	}
 }
 
-func apiReferenceItemsToClasses(input []*apiEntities.ReferenceItem) []*entities2.Class {
-	output := make([]*entities2.Class, len(input))
+func apiReferenceItemsToClasses(input []*apiEntities.ReferenceItem) []*entities.Class {
+	output := make([]*entities.Class, len(input))
 	for i, apiClass := range input {
 		output[i] = apiReferenceItemToClass(apiClass)
 	}
 	return output
 }
 
-func apiReferenceItemToRace(input *apiEntities.ReferenceItem) *entities2.Race {
-	return &entities2.Race{
+func apiReferenceItemToRace(input *apiEntities.ReferenceItem) *entities.Race {
+	return &entities.Race{
 		Key:  input.Key,
 		Name: input.Name,
 	}
 }
 
-func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities2.Race {
-	output := make([]*entities2.Race, len(input))
+func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities.Race {
+	output := make([]*entities.Race, len(input))
 	for i, apiRace := range input {
 		output[i] = apiReferenceItemToRace(apiRace)
 	}
 
 	return output
+}
+
+func apiRaceToRace(input *apiEntities.Race) *entities.Race {
+	return &entities.Race{
+		Key:  input.Key,
+		Name: input.Name,
+	}
+}
+
+func apiClassToClass(input *apiEntities.Class) *entities.Class {
+	return &entities.Class{
+		Key:  input.Key,
+		Name: input.Name,
+	}
 }

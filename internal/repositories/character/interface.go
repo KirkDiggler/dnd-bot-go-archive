@@ -5,6 +5,6 @@ import (
 )
 
 type Repository interface {
-	CreateCharacter(ctx context.Context, character *Data) (*Data, error)
-	GetCharacter(ctx context.Context, id string) (*Data, error)
+	Create(ctx context.Context, character *Data) (*Data, error)
+	Get(ctx context.Context, id string) (*Data, error)
 }

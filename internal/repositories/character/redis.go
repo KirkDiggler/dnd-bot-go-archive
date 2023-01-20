@@ -37,7 +37,7 @@ func getCharacterKey(id string) string {
 	return fmt.Sprintf("character:%s", id)
 }
 
-func (r *redisRepo) GetCharacter(ctx context.Context, id string) (*Data, error) {
+func (r *redisRepo) Get(ctx context.Context, id string) (*Data, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
@@ -54,7 +54,7 @@ func (r *redisRepo) GetCharacter(ctx context.Context, id string) (*Data, error) 
 	return jsonToData(result.Val()), nil
 }
 
-func (r *redisRepo) CreateCharacter(ctx context.Context, character *Data) (*Data, error) {
+func (r *redisRepo) Create(ctx context.Context, character *Data) (*Data, error) {
 	if character == nil {
 		return nil, dnderr.NewMissingParameterError("character")
 	}

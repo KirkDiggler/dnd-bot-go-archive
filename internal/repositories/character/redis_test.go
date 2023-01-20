@@ -52,7 +52,7 @@ func (s *characterSuite) SetupTest() {
 func (s *characterSuite) TestGetCharacter() {
 	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetVal(s.jsonPayload)
 
-	result, err := s.fixture.GetCharacter(s.ctx, s.id)
+	result, err := s.fixture.Get(s.ctx, s.id)
 	s.NoError(err)
 	s.NotNil(result)
 	s.Equal(s.data, result)
@@ -61,7 +61,7 @@ func (s *characterSuite) TestGetCharacter() {
 func (s *characterSuite) TestGetCharacterError() {
 	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetErr(errors.New("test error"))
 
-	result, err := s.fixture.GetCharacter(s.ctx, s.id)
+	result, err := s.fixture.Get(s.ctx, s.id)
 	s.Error(err)
 	s.EqualError(err, "test error")
 	s.Nil(result)
@@ -69,7 +69,7 @@ func (s *characterSuite) TestGetCharacterError() {
 func (s *characterSuite) TestGetCharacterNotFound() {
 	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetErr(redis.Nil)
 
-	result, err := s.fixture.GetCharacter(s.ctx, s.id)
+	result, err := s.fixture.Get(s.ctx, s.id)
 	s.Error(err)
 	s.EqualError(err, fmt.Sprintf("character id not found: %s", s.id))
 	s.Nil(result)
@@ -78,7 +78,7 @@ func (s *characterSuite) TestGetCharacterNotFound() {
 func (s *characterSuite) TestCreateCharacter() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetVal("OK")
 
-	result, err := s.fixture.CreateCharacter(s.ctx, s.data)
+	result, err := s.fixture.Create(s.ctx, s.data)
 	s.NoError(err)
 	s.NotNil(result)
 	s.Equal(s.data, result)
@@ -87,7 +87,7 @@ func (s *characterSuite) TestCreateCharacter() {
 func (s *characterSuite) TestCreateCharacterError() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetErr(errors.New("test error"))
 
-	result, err := s.fixture.CreateCharacter(s.ctx, s.data)
+	result, err := s.fixture.Create(s.ctx, s.data)
 	s.Error(err)
 	s.EqualError(err, "test error")
 	s.Nil(result)

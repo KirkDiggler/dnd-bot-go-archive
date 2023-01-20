@@ -27,7 +27,7 @@ type Config struct {
 	Token         string
 	GuildID       string
 	AppID         string
-	Client        dnd5e.Interface
+	Client        dnd5e.Client
 	PartyRepo     party.Interface
 	CharacterRepo character.Repository
 }

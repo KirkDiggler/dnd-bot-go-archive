@@ -5,10 +5,11 @@ import (
 )
 
 type Character struct {
-	ID    string `json:"id"`
-	Name  string
-	Race  *Race
-	Class *Class
+	ID      string
+	OwnerID string
+	Name    string
+	Race    *Race
+	Class   *Class
 }
 
 func (c *Character) ToData() *character.Data {
@@ -25,6 +26,7 @@ func (c *Character) ToData() *character.Data {
 
 	return &character.Data{
 		ID:       c.ID,
+		OwnerID:  c.OwnerID,
 		Name:     c.Name,
 		RaceKey:  raceKey,
 		ClassKey: classKey,

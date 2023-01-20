@@ -20,12 +20,12 @@ import (
 const selectCaracterAction = "select-character"
 
 type Character struct {
-	client   dnd5e.Interface
+	client   dnd5e.Client
 	charRepo character2.Repository
 }
 
 type CharacterConfig struct {
-	Client        dnd5e.Interface
+	Client        dnd5e.Client
 	CharacterRepo character2.Repository
 }
 
