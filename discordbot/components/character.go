@@ -18,7 +18,8 @@ import (
 )
 
 type Character struct {
-	client        dnd5e.Interface
+	client dnd5e.Interface
+
 	choices       []*charChoice
 	choiceOptions *choiceOptions
 	poll          *poll.Poll
