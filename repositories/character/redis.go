@@ -58,7 +58,11 @@ func (r *redisRepo) CreateCharacter(ctx context.Context, character *Data) (*Data
 		return nil, dnderr.NewMissingParameterError("character")
 	}
 
-	character.ID = r.uuider.New()
+	if character.OwnerID == "" {
+		return nil, dnderr.NewMissingParameterError("character.OwnerID")
+	}
+
+	character.ID = character.OwnerID
 
 	result := r.client.Set(ctx, getCharacterKey(character.ID), dataToJSON(character), 0)
 	if result.Err() != nil {

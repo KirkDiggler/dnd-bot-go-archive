@@ -34,13 +34,14 @@ func (s *characterSuite) SetupTest() {
 
 	s.data = &Data{
 		ID:       s.id,
+		OwnerID:  s.id,
 		Name:     "Test Character",
 		RaceKey:  "elf",
 		ClassKey: "fighter",
 	}
 
 	jsonString := dataToJSON(s.data)
-	s.jsonPayload = string(jsonString)
+	s.jsonPayload = jsonString
 	s.fixture = &redisRepo{
 		client: client,
 		uuider: s.mockUuider,
@@ -48,7 +49,7 @@ func (s *characterSuite) SetupTest() {
 }
 
 func (s *characterSuite) TestGetCharacter() {
-	s.redisMock.ExpectGet(s.id).SetVal(s.jsonPayload)
+	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetVal(s.jsonPayload)
 
 	result, err := s.fixture.GetCharacter(s.ctx, s.id)
 	s.NoError(err)
@@ -57,7 +58,7 @@ func (s *characterSuite) TestGetCharacter() {
 }
 
 func (s *characterSuite) TestGetCharacterError() {
-	s.redisMock.ExpectGet(s.id).SetErr(errors.New("test error"))
+	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetErr(errors.New("test error"))
 
 	result, err := s.fixture.GetCharacter(s.ctx, s.id)
 	s.Error(err)
@@ -65,7 +66,7 @@ func (s *characterSuite) TestGetCharacterError() {
 	s.Nil(result)
 }
 func (s *characterSuite) TestGetCharacterNotFound() {
-	s.redisMock.ExpectGet(s.id).SetErr(redis.Nil)
+	s.redisMock.ExpectGet(getCharacterKey(s.id)).SetErr(redis.Nil)
 
 	result, err := s.fixture.GetCharacter(s.ctx, s.id)
 	s.Error(err)
@@ -74,8 +75,7 @@ func (s *characterSuite) TestGetCharacterNotFound() {
 }
 
 func (s *characterSuite) TestCreateCharacter() {
-	s.mockUuider.On("New").Return(s.id)
-	s.redisMock.ExpectSet(s.id, s.jsonPayload, 0).SetVal("OK")
+	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetVal("OK")
 
 	result, err := s.fixture.CreateCharacter(s.ctx, s.data)
 	s.NoError(err)
@@ -84,8 +84,7 @@ func (s *characterSuite) TestCreateCharacter() {
 }
 
 func (s *characterSuite) TestCreateCharacterError() {
-	s.mockUuider.On("New").Return(s.id)
-	s.redisMock.ExpectSet(s.id, s.jsonPayload, 0).SetErr(errors.New("test error"))
+	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetErr(errors.New("test error"))
 
 	result, err := s.fixture.CreateCharacter(s.ctx, s.data)
 	s.Error(err)
