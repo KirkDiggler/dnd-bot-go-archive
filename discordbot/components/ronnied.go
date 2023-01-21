@@ -1,9 +1,9 @@
 package components
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,7 +25,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 	msgBuilder := strings.Builder{}
 	var response *discordgo.InteractionResponse
 	if roll == 6 {
-		msgBuilder.WriteString("Crit! Pass a drink")
+		msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -47,7 +47,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		}
 	} else if roll == 1 {
-		msgBuilder.WriteString("rolled a 1, that's a drink!")
+		msgBuilder.WriteString(fmt.Sprintf("%s rolled a 1, that's a drink!", i.Member.User.Username))
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -69,8 +69,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		}
 	} else {
-		msgBuilder.WriteString("You rolled a ")
-		msgBuilder.WriteString(strconv.Itoa(roll))
+		msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d, try again", i.Member.User.Username, roll))
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -94,9 +93,9 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.RonnieRoll(s, i)
 			case "advise":
 				grabBag := []string{
-					"Ronnie D says: That's a drink",
-					"Ronnie D says: Pass a drink",
-					"Ronnie D says: Social!",
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: that's a drink", i.Member.User.Username),
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: pass a drink", i.Member.User.Username),
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: social!", i.Member.User.Username),
 				}
 
 				result := grabBag[rand.Intn(len(grabBag)-1)]

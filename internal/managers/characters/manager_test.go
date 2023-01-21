@@ -45,6 +45,14 @@ func (s *managerSuite) SetupTest() {
 		OwnerID: s.id,
 		Race:    s.race,
 		Class:   s.class,
+		Attribues: map[entities.Attribute]*entities.AbilityScore{
+			entities.AttributeStrength:     {Score: 16},
+			entities.AttributeDexterity:    {Score: 15},
+			entities.AttributeConstitution: {Score: 14},
+			entities.AttributeIntelligence: {Score: 13},
+			entities.AttributeWisdom:       {Score: 12},
+			entities.AttributeCharisma:     {Score: 11},
+		},
 	}
 	s.fixture = &manager{
 		charRepo: s.mockRepo,
