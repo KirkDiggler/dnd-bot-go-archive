@@ -11,6 +11,7 @@ type Data struct {
 }
 
 type RollData struct {
+	Used    bool  `json:"used"`
 	Total   int   `json:"total"`
 	Highest int   `json:"highest"`
 	Lowest  int   `json:"lowest"`

@@ -57,6 +57,7 @@ func rollDataToRollResult(data *character.RollData) *dice.RollResult {
 	}
 
 	return &dice.RollResult{
+		Used:    data.Used,
 		Total:   data.Total,
 		Highest: data.Highest,
 		Lowest:  data.Lowest,

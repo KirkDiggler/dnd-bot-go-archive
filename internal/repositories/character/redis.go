@@ -54,7 +54,7 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*Data, error) {
 	return jsonToData(result.Val()), nil
 }
 
-func (r *redisRepo) Create(ctx context.Context, character *Data) (*Data, error) {
+func (r *redisRepo) Put(ctx context.Context, character *Data) (*Data, error) {
 	if character == nil {
 		return nil, dnderr.NewMissingParameterError("character")
 	}

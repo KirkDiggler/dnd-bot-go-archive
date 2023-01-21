@@ -7,6 +7,6 @@ import (
 )
 
 type Manager interface {
-	Create(ctx context.Context, character *entities.Character) (*entities.Character, error)
+	Put(ctx context.Context, character *entities.Character) (*entities.Character, error)
 	Get(ctx context.Context, id string) (*entities.Character, error)
 }

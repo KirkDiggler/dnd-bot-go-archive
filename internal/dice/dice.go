@@ -8,10 +8,11 @@ import (
 )
 
 type RollResult struct {
-	Total   int   `json:"total"`
-	Highest int   `json:"highest"`
-	Lowest  int   `json:"lowest"`
-	Rolls   []int `json:"rolls"`
+	Used    bool
+	Total   int
+	Highest int
+	Lowest  int
+	Rolls   []int
 }
 
 func Roll(diceString string) (*RollResult, error) {

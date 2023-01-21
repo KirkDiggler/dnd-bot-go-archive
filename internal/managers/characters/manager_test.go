@@ -61,53 +61,53 @@ func (s *managerSuite) SetupTest() {
 }
 
 func (s *managerSuite) TestCreate() {
-	s.mockRepo.On("Create", s.ctx, s.character.ToData()).Return(
+	s.mockRepo.On("Put", s.ctx, s.character.ToData()).Return(
 		s.character.ToData(), nil)
 
-	char, err := s.fixture.Create(s.ctx, s.character)
+	char, err := s.fixture.Put(s.ctx, s.character)
 	s.NoError(err)
 	s.Equal(s.character, char)
 }
 
 func (s *managerSuite) TestCreateMissingCharacter() {
-	_, err := s.fixture.Create(s.ctx, nil)
+	_, err := s.fixture.Put(s.ctx, nil)
 	s.Error(err)
 	s.EqualError(err, "Missing parameter: character")
 }
 
 func (s *managerSuite) TestCreateMissingCharacterName() {
 	s.character.Name = ""
-	_, err := s.fixture.Create(s.ctx, s.character)
+	_, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "Missing parameter: character.Name")
 }
 
 func (s *managerSuite) TestCreateMissingCharacterOwnerID() {
 	s.character.OwnerID = ""
-	_, err := s.fixture.Create(s.ctx, s.character)
+	_, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "Missing parameter: character.OwnerID")
 }
 
 func (s *managerSuite) TestCreateMissingCharacterRace() {
 	s.character.Race = nil
-	_, err := s.fixture.Create(s.ctx, s.character)
+	_, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "Missing parameter: character.Race")
 }
 
 func (s *managerSuite) TestCreateMissingCharacterClass() {
 	s.character.Class = nil
-	_, err := s.fixture.Create(s.ctx, s.character)
+	_, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "Missing parameter: character.Class")
 }
 
 func (s *managerSuite) TestCreateRepoErrors() {
-	s.mockRepo.On("Create", s.ctx, s.character.ToData()).Return(
+	s.mockRepo.On("Put", s.ctx, s.character.ToData()).Return(
 		nil, errors.New("repo error"))
 
-	_, err := s.fixture.Create(s.ctx, s.character)
+	_, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "repo error")
 }

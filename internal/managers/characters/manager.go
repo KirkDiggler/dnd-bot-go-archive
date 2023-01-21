@@ -38,7 +38,7 @@ func New(cfg *Config) (Manager, error) {
 	}, nil
 }
 
-func (m *manager) Create(ctx context.Context, character *entities.Character) (*entities.Character, error) {
+func (m *manager) Put(ctx context.Context, character *entities.Character) (*entities.Character, error) {
 	if character == nil {
 		return nil, dnderr.NewMissingParameterError("character")
 	}
@@ -59,7 +59,7 @@ func (m *manager) Create(ctx context.Context, character *entities.Character) (*e
 		return nil, dnderr.NewMissingParameterError("character.Class")
 	}
 
-	data, err := m.charRepo.Create(ctx, character.ToData())
+	data, err := m.charRepo.Put(ctx, character.ToData())
 	if err != nil {
 		return nil, err
 	}
