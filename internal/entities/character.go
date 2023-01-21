@@ -10,7 +10,7 @@ type Character struct {
 	Name      string
 	Race      *Race
 	Class     *Class
-	Attribues []*AbilityScore
+	Attribues map[Attribute]*AbilityScore
 }
 
 func (c *Character) ToData() *character.Data {
@@ -34,8 +34,8 @@ func (c *Character) ToData() *character.Data {
 		Cha: 0,
 	}
 
-	for _, attr := range c.Attribues {
-		switch attr.Attribute {
+	for key, attr := range c.Attribues {
+		switch key {
 		case AttributeStrength:
 			data.Str = attr.Score
 		case AttributeDexterity:

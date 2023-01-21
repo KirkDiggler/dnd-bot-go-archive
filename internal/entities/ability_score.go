@@ -12,7 +12,6 @@ const (
 )
 
 type AbilityScore struct {
-	Attribute Attribute
-	Score     int
-	Bonus     int
+	Score int
+	Bonus int
 }
