@@ -7,6 +7,14 @@ type Data struct {
 	ClassKey   string         `json:"class_key"`
 	RaceKey    string         `json:"race_key"`
 	Attributes *AttributeData `json:"attributes"`
+	Rolls      []*RollData    `json:"rolls"`
+}
+
+type RollData struct {
+	Total   int   `json:"total"`
+	Highest int   `json:"highest"`
+	Lowest  int   `json:"lowest"`
+	Rolls   []int `json:"rolls"`
 }
 
 type AttributeData struct {

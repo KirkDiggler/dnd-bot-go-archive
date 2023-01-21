@@ -430,7 +430,7 @@ func rollAttributes() ([]*rollResult, error) {
 		attributes[idx] = &rollResult{
 			Index:   idx,
 			Roll:    roll.Total - roll.Lowest,
-			Details: roll.Details,
+			Details: roll.Rolls,
 		}
 	}
 	return attributes, nil

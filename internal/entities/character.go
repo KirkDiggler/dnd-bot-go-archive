@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
 )
 
@@ -11,6 +12,7 @@ type Character struct {
 	Race      *Race
 	Class     *Class
 	Attribues map[Attribute]*AbilityScore
+	Rolls     []*dice.RollResult
 }
 
 func (c *Character) ToData() *character.Data {
@@ -57,5 +59,28 @@ func (c *Character) ToData() *character.Data {
 		RaceKey:    raceKey,
 		ClassKey:   classKey,
 		Attributes: data,
+		Rolls:      rollResultsToRollDatas(c.Rolls),
 	}
+}
+
+func rollResultToRollData(result *dice.RollResult) *character.RollData {
+	if result == nil {
+
+		return nil
+	}
+	return &character.RollData{
+		Total:   result.Total,
+		Highest: result.Highest,
+		Lowest:  result.Lowest,
+		Rolls:   result.Rolls,
+	}
+}
+
+func rollResultsToRollDatas(results []*dice.RollResult) []*character.RollData {
+	data := make([]*character.RollData, len(results))
+	for i, r := range results {
+		data[i] = rollResultToRollData(r)
+	}
+
+	return data
 }
