@@ -142,7 +142,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 	}
 
 	if idx >= len(char.Rolls) {
-		log.Printf("idx: %d, len: %d", idx, len(char.Rolls))
+		log.Printf("index out of rabge. idx: %d, len: %d", idx, len(char.Rolls))
 		return // TODO: Handle error
 	}
 	// TODO: make set attribut function that returns bool if it was set
@@ -224,10 +224,8 @@ func (c *Character) GenerateAttributeSelect(char *entities.Character, rolls []*d
 
 	attrToSelect := ""
 	for _, attr := range selectionOrder {
-		log.Println("attr: ", attr)
 		if selected[entities.Attribute(attr)].Score == 0 {
 			attrToSelect = attr
-			log.Println("attrToSelect: ", attrToSelect)
 			break
 		}
 	}
@@ -358,6 +356,7 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		return
 	}
 
+	c.lastToken = i.Token
 	components := make([]discordgo.SelectMenuOption, len(choices))
 	for idx, char := range choices {
 		components[idx] = discordgo.SelectMenuOption{
@@ -439,6 +438,16 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 			Key: class,
 		},
 	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	oldInteraction := &discordgo.Interaction{
+		AppID: i.AppID,
+		Token: c.lastToken,
+	}
+	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
