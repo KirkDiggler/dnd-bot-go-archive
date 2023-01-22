@@ -13,17 +13,29 @@ import (
 const ronnieRollBack = "ronnie-roll-back"
 
 type RonnieD struct {
+	messageID string
 }
 
 func NewRonnieD() (*RonnieD, error) {
 	return &RonnieD{}, nil
 }
 
+func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	oldInteraction := &discordgo.Interaction{AppID: i.AppID, Token: c.messageID}
+	err := s.InteractionResponseDelete(oldInteraction)
+	if err != nil {
+		log.Print(err)
+	}
+
+	c.RonnieRoll(s, i)
+}
 func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	rand.Seed(time.Now().UnixNano())
 	roll := rand.Intn(6) + 1
 	msgBuilder := strings.Builder{}
 	var response *discordgo.InteractionResponse
+	c.messageID = i.Token
+
 	if roll == 6 {
 		msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
 		response = &discordgo.InteractionResponse{
@@ -83,6 +95,20 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 }
 
+func (c *RonnieD) RonnieRollBack(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	msgBuilder := strings.Builder{}
+	msgBuilder.WriteString(fmt.Sprintf("%s rolled it back!", i.Member.User.Username))
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content: msgBuilder.String(),
+		},
+	}
+	err := s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Print(err)
+	}
+}
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -116,7 +142,7 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 	case discordgo.InteractionMessageComponent:
 		switch i.MessageComponentData().CustomID {
 		case ronnieRollBack:
-			c.RonnieRoll(s, i)
+			c.RollBack(s, i)
 		}
 	}
 }

@@ -15,23 +15,15 @@ type RollResult struct {
 	Rolls   []int
 }
 
-func Roll(diceString string) (*RollResult, error) {
-	diceParts := strings.Split(diceString, "d")
-	if len(diceParts) != 2 {
-		return nil, errors.New("invalid dice string")
+func Roll(count, size int) (*RollResult, error) {
+	if count < 1 {
+		return nil, errors.New("invalid dice count")
 	}
 
-	strCount := diceParts[0]
-	strSize := diceParts[1]
+	if size < 1 {
+		return nil, errors.New("invalid dice size")
+	}
 
-	count, err := strconv.Atoi(strCount)
-	if err != nil {
-		return nil, errors.New("invalid dice string")
-	}
-	size, err := strconv.Atoi(strSize)
-	if err != nil {
-		return nil, errors.New("invalid dice string")
-	}
 	max, min, total := 0, 0, 0
 
 	out := make([]int, count)
@@ -60,4 +52,25 @@ func Roll(diceString string) (*RollResult, error) {
 		Lowest:  min,
 		Rolls:   out,
 	}, nil
+}
+
+func RollString(diceString string) (*RollResult, error) {
+	diceParts := strings.Split(diceString, "d")
+	if len(diceParts) != 2 {
+		return nil, errors.New("invalid dice string")
+	}
+
+	strCount := diceParts[0]
+	strSize := diceParts[1]
+
+	count, err := strconv.Atoi(strCount)
+	if err != nil {
+		return nil, errors.New("invalid dice string")
+	}
+	size, err := strconv.Atoi(strSize)
+	if err != nil {
+		return nil, errors.New("invalid dice string")
+	}
+
+	return Roll(count, size)
 }

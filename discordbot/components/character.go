@@ -2,6 +2,7 @@ package components
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -25,11 +26,14 @@ const (
 	rollCharacterActionPhysical = "roll-character-physical"
 	rollCharacterActionMental   = "roll-character-mental"
 	selectAttributeKey          = "select-attribute"
+	buttonAttributeKey          = "button-attribute"
 )
 
 type Character struct {
 	client      dnd5e.Client
 	charManager characters.Manager
+
+	lastToken string
 }
 
 type CharacterConfig struct {
@@ -103,9 +107,7 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		case selectCaracterAction:
 			c.handleCharSelect(s, i)
 		case rollCharacterActionPhysical:
-			c.handleRollCharacterPhysical(s, i)
-		case rollCharacterActionMental:
-			c.handleRollCharacterMental(s, i)
+			c.handleRollCharacter(s, i)
 		case strKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
 			c.handleAttributeSelect(s, i, "str", selectSlice)
@@ -127,9 +129,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		}
 	}
 }
-func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.InteractionCreate, attribute string, selectSlice []string) {
-	log.Printf("User: %s, Attribute: %s, SelectSlice: %v", i.Member.User.ID, attribute, selectSlice)
 
+func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.InteractionCreate, attribute string, selectSlice []string) {
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
@@ -141,6 +142,10 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		return // TODO: Handle error
 	}
 
+	if idx >= len(char.Rolls) {
+		log.Printf("idx: %d, len: %d", idx, len(char.Rolls))
+		return // TODO: Handle error
+	}
 	// TODO: make set attribut function that returns bool if it was set
 	if !char.Rolls[idx].Used { // We have not used this one
 		char.Attribues[entities.Attribute(attribute)].Score = char.Rolls[idx].Total - char.Rolls[idx].Lowest
@@ -152,6 +157,237 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
+	}
+
+	rolls := char.Rolls
+	attributeSelectData, err := c.GenerateAttributeSelect(char, rolls, i)
+	done := false
+	if err != nil {
+		if err.Error() == "done" {
+			done = true
+		} else {
+			log.Println(err)
+			return // TODO: Handle error
+		}
+	}
+	msgBuilder := strings.Builder{}
+	msgBuilder.WriteString("Rolls: ")
+	for _, roll := range rolls {
+		msgBuilder.WriteString(fmt.Sprintf("%d, ", roll.Total-roll.Lowest))
+	}
+
+	oldInteraction := &discordgo.Interaction{AppID: i.AppID, Token: c.lastToken}
+	err = s.InteractionResponseDelete(oldInteraction)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	var response *discordgo.InteractionResponse
+	if done {
+		response = &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
+				Content: "completed selecting attributes",
+			},
+		}
+	} else {
+		response = &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:      discordgo.MessageFlagsEphemeral,
+				Content:    msgBuilder.String(),
+				Components: attributeSelectData,
+			},
+		}
+	}
+
+	c.lastToken = i.Token
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+}
+
+func (c *Character) GenerateAttributeSelect(char *entities.Character, rolls []*dice.RollResult, i *discordgo.InteractionCreate) ([]discordgo.MessageComponent, error) {
+	log.Println("GenerateAttributeSelect")
+	userID := i.Member.User.ID
+
+	selectionOrder := []string{"str", "dex", "con", "int", "wis", "cha"}
+
+	selected := make(map[entities.Attribute]*entities.AbilityScore)
+
+	for k, v := range char.Attribues {
+		selected[k] = v
+	}
+
+	attrToSelect := ""
+	for _, attr := range selectionOrder {
+		log.Println("attr: ", attr)
+		if selected[entities.Attribute(attr)].Score == 0 {
+			attrToSelect = attr
+			log.Println("attrToSelect: ", attrToSelect)
+			break
+		}
+	}
+
+	if attrToSelect == "" {
+		return nil, errors.New("done")
+	}
+
+	components := make([]discordgo.SelectMenuOption, 0)
+	for idx, roll := range rolls {
+		if !roll.Used {
+			components = append(components, discordgo.SelectMenuOption{
+				Label: fmt.Sprintf("%v  %d", roll.Rolls, roll.Total-roll.Lowest),
+				Value: fmt.Sprintf("roll:%d:%d", idx, roll.Total-roll.Lowest),
+			})
+		}
+	}
+
+	response := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "STR", selected[entities.AttributeStrength].Score),
+					Disabled: selected[entities.AttributeStrength].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:str", buttonAttributeKey, userID),
+				},
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "DEX", selected[entities.AttributeDexterity].Score),
+					Disabled: selected[entities.AttributeDexterity].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:dex", buttonAttributeKey, userID),
+				},
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "CON", selected[entities.AttributeConstitution].Score),
+					Disabled: selected[entities.AttributeConstitution].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:con", buttonAttributeKey, userID),
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "INT", selected[entities.AttributeIntelligence].Score),
+					Disabled: selected[entities.AttributeIntelligence].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:int", buttonAttributeKey, userID),
+				},
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "WIS", selected[entities.AttributeWisdom].Score),
+					Disabled: selected[entities.AttributeWisdom].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:wis", buttonAttributeKey, userID),
+				},
+				discordgo.Button{
+					Label:    fmt.Sprintf("%s: %d", "CHA", selected[entities.AttributeCharisma].Score),
+					Disabled: selected[entities.AttributeCharisma].Score == 0,
+					CustomID: fmt.Sprintf("%s:%s:cha", buttonAttributeKey, userID),
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				&discordgo.SelectMenu{
+					Placeholder: strings.ToUpper(attrToSelect),
+					CustomID:    fmt.Sprintf("%s:%s:%s", selectAttributeKey, userID, attrToSelect),
+					Options:     components,
+				},
+			},
+		},
+	}
+
+	return response, nil
+}
+
+func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Rolling character")
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	c.lastToken = i.Token
+
+	rolls, err := rollAttributes()
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	char.Rolls = rolls
+	_, err = c.charManager.Put(context.Background(), char)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	attributeSelectData, err := c.GenerateAttributeSelect(char, rolls, i)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+	msgBuilder := strings.Builder{}
+	msgBuilder.WriteString("Rolls: ")
+	for _, roll := range rolls {
+		msgBuilder.WriteString(fmt.Sprintf("%d, ", roll.Total-roll.Lowest))
+	}
+
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:      discordgo.MessageFlagsEphemeral,
+			Content:    msgBuilder.String(),
+			Components: attributeSelectData,
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+}
+
+func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("handleRandomStart called")
+	choices, err := c.startNewChoices(4)
+	if err != nil {
+		log.Println(err)
+		// TODO: Handle error
+		return
+	}
+
+	components := make([]discordgo.SelectMenuOption, len(choices))
+	for idx, char := range choices {
+		components[idx] = discordgo.SelectMenuOption{
+			Label: fmt.Sprintf("%s the %s %s", i.Member.User.Username, char.Race.Name, char.Class.Name),
+			Value: fmt.Sprintf("choice:%d:%s:%s", idx, char.Race.Key, char.Class.Key),
+		}
+	}
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Select your new character:",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.SelectMenu{
+							// Select menu, as other components, must have a customID, so we set it to this value.
+							CustomID:    selectCaracterAction,
+							Placeholder: "This is the tale of...👇",
+							Options:     components,
+						},
+					},
+				},
+			},
+		},
+	}
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 }
@@ -236,189 +472,6 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	}
 }
 
-func (c *Character) GenerateAttributSelect(a *discordgo.Session, i *discordgo.InteractionCreate) *discordgo.InteractionResponseData {
-	log.Println("Rolling character")
-	rolls, err := rollAttributes()
-	if err != nil {
-		log.Println(err)
-		return nil // TODO handle error
-	}
-
-	userID := i.Member.User.ID
-
-	components := make([]discordgo.SelectMenuOption, len(rolls))
-	for idx, roll := range rolls {
-		components[idx] = discordgo.SelectMenuOption{
-			Label: fmt.Sprintf("%v  %d", roll.Details, roll.Roll),
-			Value: fmt.Sprintf("roll:%d:%d", roll.Index, roll.Roll),
-		}
-	}
-
-	response := &discordgo.InteractionResponseData{
-		Flags:   discordgo.MessageFlagsEphemeral,
-		Content: "Assign your physical attributes:",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					&discordgo.SelectMenu{
-						Placeholder: "STR",
-						CustomID:    fmt.Sprintf("%s:%s:str", selectAttributeKey, userID),
-						Options:     components,
-					},
-				},
-			},
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					&discordgo.SelectMenu{
-						Placeholder: "DEX",
-						CustomID:    fmt.Sprintf("%s:%s:dex", selectAttributeKey, userID),
-						Options:     components,
-					},
-				},
-			},
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					&discordgo.SelectMenu{
-						Placeholder: "CON",
-						CustomID:    fmt.Sprintf("%s:%s:con", selectAttributeKey, userID),
-						Options:     components,
-					},
-				},
-			},
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Continue Non-Physical",
-						Style:    discordgo.SuccessButton,
-						CustomID: rollCharacterActionMental,
-						Emoji: discordgo.ComponentEmoji{
-							Name: "🎲",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return response
-}
-func (c *Character) handleRollCharacterPhysical(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	response := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: c.GenerateAttributSelect(s, i),
-	}
-	err := s.InteractionRespond(i.Interaction, response)
-	if err != nil {
-		log.Println(err)
-		return // TODO handle error
-	}
-}
-
-func (c *Character) handleRollCharacterMental(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("Rolling character")
-	rolls, err := rollAttributes()
-	if err != nil {
-		log.Println(err)
-		return // TODO handle error
-	}
-
-	log.Println(rolls)
-	components := make([]discordgo.SelectMenuOption, len(rolls))
-	for idx, roll := range rolls {
-		components[idx] = discordgo.SelectMenuOption{
-			Label: fmt.Sprintf("%v  %d", roll.Details, roll.Roll),
-			Value: fmt.Sprintf("roll:%d:%d", roll.Index, roll.Roll),
-		}
-	}
-
-	response := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Assign your physical attributes:",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						&discordgo.SelectMenu{
-							Placeholder: "INT",
-							CustomID:    fmt.Sprintf("%s:int", selectAttributeKey),
-							Options:     components,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						&discordgo.SelectMenu{
-							Placeholder: "WIS",
-							CustomID:    fmt.Sprintf("%s:wis", selectAttributeKey),
-							Options:     components,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						&discordgo.SelectMenu{
-							Placeholder: "CHA",
-							CustomID:    fmt.Sprintf("%s:char", selectAttributeKey),
-							Options:     components,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	log.Println("response built")
-	err = s.InteractionRespond(i.Interaction, response)
-	if err != nil {
-		log.Println(err)
-		return // TODO handle error
-	}
-	log.Println("response sent")
-}
-
-func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("handleRandomStart called")
-	choices, err := c.startNewChoices(4)
-	if err != nil {
-		log.Println(err)
-		// TODO: Handle error
-		return
-	}
-
-	components := make([]discordgo.SelectMenuOption, len(choices))
-	for idx, char := range choices {
-		components[idx] = discordgo.SelectMenuOption{
-			Label: fmt.Sprintf("%s the %s %s", i.Member.User.Username, char.Race.Name, char.Class.Name),
-			Value: fmt.Sprintf("choice:%d:%s:%s", idx, char.Race.Key, char.Class.Key),
-		}
-	}
-	response := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Select your new character:",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							// Select menu, as other components, must have a customID, so we set it to this value.
-							CustomID:    selectCaracterAction,
-							Placeholder: "This is the tale of...👇",
-							Options:     components,
-						},
-					},
-				},
-			},
-		},
-	}
-	err = s.InteractionRespond(i.Interaction, response)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-}
-
 func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	// TODO cache these. cache in the client wrapper? configurable?
 	races, err := c.client.ListRaces()
@@ -444,25 +497,15 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	return choices, nil
 }
 
-type rollResult struct {
-	Index   int
-	Roll    int
-	Details []int
-}
-
-func rollAttributes() ([]*rollResult, error) {
-	attributes := make([]*rollResult, 6)
+func rollAttributes() ([]*dice.RollResult, error) {
+	attributes := make([]*dice.RollResult, 6)
 
 	for idx := range attributes {
-		roll, err := dice.Roll("4d6")
+		roll, err := dice.RollString("4d6")
 		if err != nil {
 			return nil, err
 		}
-		attributes[idx] = &rollResult{
-			Index:   idx,
-			Roll:    roll.Total - roll.Lowest,
-			Details: roll.Rolls,
-		}
+		attributes[idx] = roll
 	}
 	return attributes, nil
 }
