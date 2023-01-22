@@ -78,7 +78,7 @@ func (s *characterSuite) TestGetCharacterNotFound() {
 func (s *characterSuite) TestCreateCharacter() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetVal("OK")
 
-	result, err := s.fixture.Create(s.ctx, s.data)
+	result, err := s.fixture.Put(s.ctx, s.data)
 	s.NoError(err)
 	s.NotNil(result)
 	s.Equal(s.data, result)
@@ -87,7 +87,7 @@ func (s *characterSuite) TestCreateCharacter() {
 func (s *characterSuite) TestCreateCharacterError() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetErr(errors.New("test error"))
 
-	result, err := s.fixture.Create(s.ctx, s.data)
+	result, err := s.fixture.Put(s.ctx, s.data)
 	s.Error(err)
 	s.EqualError(err, "test error")
 	s.Nil(result)

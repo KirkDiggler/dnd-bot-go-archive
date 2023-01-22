@@ -10,7 +10,7 @@ type Mock struct {
 	mock.Mock
 }
 
-func (m *Mock) Create(ctx context.Context, character *Data) (*Data, error) {
+func (m *Mock) Put(ctx context.Context, character *Data) (*Data, error) {
 	args := m.Called(ctx, character)
 
 	if args.Error(1) != nil {

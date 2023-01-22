@@ -22,6 +22,7 @@ type bot struct {
 	partyRepo          party.Interface
 	partyComponent     *components.Party
 	characterComponent *components.Character
+	ronnieDComponent   *components.RonnieD
 }
 
 type Config struct {
@@ -83,6 +84,11 @@ func New(cfg *Config) (*bot, error) {
 		return nil, err
 	}
 
+	ronniedComponent, err := components.NewRonnieD()
+	if err != nil {
+		return nil, err
+	}
+
 	return &bot{
 		session:            session,
 		appID:              cfg.AppID,
@@ -91,6 +97,7 @@ func New(cfg *Config) (*bot, error) {
 		partyRepo:          cfg.PartyRepo,
 		partyComponent:     partyComponent,
 		characterComponent: characterComponent,
+		ronnieDComponent:   ronniedComponent,
 	}, nil
 }
 
@@ -99,32 +106,37 @@ func (b *bot) Start() error {
 		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
-	ronnied, err := components.NewRonnieD()
+	// RonnieD commands
+	b.session.AddHandler(b.ronnieDComponent.HandleInteractionCreate)
+	ronnieCmd := b.ronnieDComponent.GetApplicationCommand()
+
+	_, err := b.session.ApplicationCommandCreate(b.appID, b.guildID, ronnieCmd)
 	if err != nil {
 		return err
 	}
 
-	b.session.AddHandler(ronnied.HandleInteractionCreate)
+	b.registeredCommands = append(b.registeredCommands, ronnieCmd)
 
-	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, ronnied.GetApplicationCommand())
-	if err != nil {
-		return err
-	}
-
+	// Party commands
 	b.session.AddHandler(b.partyComponent.HandleInteractionCreate)
 
-	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, b.partyComponent.GetApplicationCommand())
+	partyCmd := b.partyComponent.GetApplicationCommand()
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, partyCmd)
 	if err != nil {
 		return err
 	}
 
+	b.registeredCommands = append(b.registeredCommands, partyCmd)
+
+	// Character commands
 	b.session.AddHandler(b.characterComponent.HandleInteractionCreate)
-
-	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, b.characterComponent.GetApplicationCommand())
+	charCmd := b.characterComponent.GetApplicationCommand()
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, charCmd)
 	if err != nil {
 		return err
 	}
 
+	b.registeredCommands = append(b.registeredCommands, charCmd)
 	err = b.session.Open()
 	if err != nil {
 		return err
