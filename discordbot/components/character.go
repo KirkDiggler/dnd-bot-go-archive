@@ -148,6 +148,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 	// TODO: make set attribut function that returns bool if it was set
 	if !char.Rolls[idx].Used { // We have not used this one
 		char.Attribues[entities.Attribute(attribute)].Score = char.Rolls[idx].Total - char.Rolls[idx].Lowest
+		log.Println("setting ", attribute, " to ", char.Attribues[entities.Attribute(attribute)].Score)
 		char.Rolls[idx].Used = true
 		// TODO Calculate modifiers
 	}
@@ -211,7 +212,6 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 }
 
 func (c *Character) GenerateAttributeSelect(char *entities.Character, rolls []*dice.RollResult, i *discordgo.InteractionCreate) ([]discordgo.MessageComponent, error) {
-	log.Println("GenerateAttributeSelect")
 	userID := i.Member.User.ID
 
 	selectionOrder := []string{"str", "dex", "con", "int", "wis", "cha"}
@@ -298,12 +298,13 @@ func (c *Character) GenerateAttributeSelect(char *entities.Character, rolls []*d
 }
 
 func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("Rolling character")
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
+
+	log.Println("Rolling for", i.Member.User.Username, "the ", char.Race.Name, " ", char.Class.Name)
 
 	c.lastToken = i.Token
 
