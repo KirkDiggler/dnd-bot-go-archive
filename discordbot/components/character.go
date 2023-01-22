@@ -22,11 +22,10 @@ import (
 )
 
 const (
-	selectCaracterAction        = "select-character"
-	rollCharacterActionPhysical = "roll-character-physical"
-	rollCharacterActionMental   = "roll-character-mental"
-	selectAttributeKey          = "select-attribute"
-	buttonAttributeKey          = "button-attribute"
+	selectCaracterAction = "select-character"
+	rollCharacterAction  = "roll-character"
+	selectAttributeKey   = "select-attribute"
+	buttonAttributeKey   = "button-attribute"
 )
 
 type Character struct {
@@ -106,7 +105,7 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		switch i.MessageComponentData().CustomID {
 		case selectCaracterAction:
 			c.handleCharSelect(s, i)
-		case rollCharacterActionPhysical:
+		case rollCharacterAction:
 			c.handleRollCharacter(s, i)
 		case strKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
@@ -430,7 +429,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
-	char, err := c.charManager.Put(context.Background(), &entities.Character{
+	_, err := c.charManager.Put(context.Background(), &entities.Character{
 		OwnerID: i.Member.User.ID,
 		Name:    i.Member.User.Username,
 		Race: &entities.Race{
@@ -445,31 +444,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 		return // TODO handle error
 	}
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Created character %s", char.ID),
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							Label:    "Roll Character",
-							Style:    discordgo.SuccessButton,
-							CustomID: rollCharacterActionPhysical,
-							Emoji: discordgo.ComponentEmoji{
-								Name: "🎲",
-							},
-						},
-					},
-				},
-			},
-		},
-	})
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	c.handleRollCharacter(s, i)
 }
 
 func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
