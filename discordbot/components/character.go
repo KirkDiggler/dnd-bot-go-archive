@@ -31,8 +31,6 @@ const (
 type Character struct {
 	client      dnd5e.Client
 	charManager characters.Manager
-
-	lastToken string
 }
 
 type CharacterConfig struct {
@@ -176,7 +174,17 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		msgBuilder.WriteString(fmt.Sprintf("%d, ", roll.Total-roll.Lowest))
 	}
 
-	oldInteraction := &discordgo.Interaction{AppID: i.AppID, Token: c.lastToken}
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepRoll,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	oldInteraction := &discordgo.Interaction{AppID: i.AppID, Token: state.LastToken}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
 		log.Println(err)
@@ -203,7 +211,6 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		}
 	}
 
-	c.lastToken = i.Token
 	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Println(err)
@@ -306,7 +313,15 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 
 	log.Println("Rolling for", i.Member.User.Username, "the ", char.Race.Name, " ", char.Class.Name)
 
-	c.lastToken = i.Token
+	_, err = c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepRoll,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
 
 	rolls, err := rollAttributes()
 	if err != nil {
@@ -357,7 +372,15 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		return
 	}
 
-	c.lastToken = i.Token
+	_, err = c.charManager.SaveState(context.Background(), &entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepSelect,
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
 	components := make([]discordgo.SelectMenuOption, len(choices))
 	for idx, char := range choices {
 		components[idx] = discordgo.SelectMenuOption{
@@ -389,6 +412,25 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		fmt.Println(err)
 	}
 
+}
+
+// Gets the current state for returning before setting the input state
+func (c *Character) getAndUpdateState(input *entities.CharacterCreation) (*entities.CharacterCreation, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	existing, err := c.charManager.GetState(context.Background(), input.CharacterID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.charManager.SaveState(context.Background(), input)
+	if err != nil {
+		return nil, err
+	}
+
+	return existing, nil
 }
 
 func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -444,9 +486,19 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 		return // TODO handle error
 	}
 
+	lastState, err := c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepRoll,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
 	oldInteraction := &discordgo.Interaction{
 		AppID: i.AppID,
-		Token: c.lastToken,
+		Token: lastState.LastToken,
 	}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {

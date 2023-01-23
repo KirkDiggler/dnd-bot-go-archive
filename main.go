@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_creation"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
@@ -69,9 +71,17 @@ func main() {
 		panic(err)
 	}
 
+	stateRepo, err := character_creation.New(&character_creation.Config{
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	charManager, err := characters.New(&characters.Config{
 		Client:        dnd5eClient,
 		CharacterRepo: charRepo,
+		StateRepo:     stateRepo,
 	})
 	if err != nil {
 		panic(err)
