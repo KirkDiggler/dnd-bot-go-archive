@@ -68,7 +68,7 @@ func (m *manager) Put(ctx context.Context, character *entities.Character) (*enti
 		return nil, dnderr.NewMissingParameterError("character.Class")
 	}
 
-	data, err := m.charRepo.Put(ctx, character.ToData())
+	data, err := m.charRepo.Put(ctx, character)
 	if err != nil {
 		return nil, err
 	}

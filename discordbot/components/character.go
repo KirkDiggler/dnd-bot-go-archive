@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 
@@ -123,6 +124,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		case chaKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
 			c.handleAttributeSelect(s, i, "cha", selectSlice)
+		case selectProficiencyAction:
+			c.handleProficiencySelect(s, i)
 		}
 	}
 }
@@ -194,7 +197,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 
 	var response *discordgo.InteractionResponse
 	if done {
-		c.handleProficincyStep(s, i)
+		c.handleProficiencyStep(s, i)
 		return
 	} else {
 		response = &discordgo.InteractionResponse{
@@ -472,15 +475,31 @@ func (c *Character) generateProficiencyChoices(char *entities.Character) (string
 		return "", nil, errors.New("no proficiency choices")
 	}
 
-	selectedChoice := choices[0]
+	var selectedChoice *entities.Choice
+	for _, choice := range choices {
+		if len(choice.Options) == 0 {
+			log.Println("No proficiency choices")
+			return "", nil, errors.New("no proficiency choices")
+		}
+
+		if !choice.Selected {
+			selectedChoice = choice
+			break
+		}
+	}
+
+	if selectedChoice == nil {
+		log.Println("No proficiency choices")
+		return "", nil, errors.New("no proficiency choices")
+	}
 
 	msg := fmt.Sprintf("Select %d starting proficiencies:", selectedChoice.Count)
 
-	options := make([]discordgo.SelectMenuOption, len(selectedChoice.From))
-	for idx, choice := range selectedChoice.From {
+	options := make([]discordgo.SelectMenuOption, len(selectedChoice.Options))
+	for idx, choice := range selectedChoice.Options {
 		options[idx] = discordgo.SelectMenuOption{
-			Label: choice.Name,
-			Value: fmt.Sprintf("choice:%s", choice.Key),
+			Label: choice.GetName(),
+			Value: fmt.Sprintf("choice:%s", choice.GetKey()),
 		}
 	}
 
@@ -496,8 +515,90 @@ func (c *Character) generateProficiencyChoices(char *entities.Character) (string
 	return msg, components, nil
 }
 
-func (c *Character) handleProficincyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepProficiency,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	classChoices := char.Class.ProficiencyChoices
+	if len(classChoices) == 0 {
+		log.Println("No proficiency choices")
+		return // TODO handle error
+	}
+
+	var done bool
+	for _, choice := range classChoices {
+		if !choice.Selected {
+			choice.Selected = true
+			for _, value := range i.MessageComponentData().Values {
+				char.AddProficiency(&entities.Proficiency{
+					Key: strings.Split(value, ":")[1],
+				})
+			}
+			break
+		}
+		done = true
+	}
+
+	_, err = c.charManager.Put(context.Background(), char)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	oldInteraction := &discordgo.Interaction{
+		AppID: i.AppID,
+		Token: state.LastToken,
+	}
+	err = s.InteractionResponseDelete(oldInteraction)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	if done {
+		response := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
+				Content: "Proficiencies selected",
+			},
+		}
+
+		err = s.InteractionRespond(i.Interaction, response)
+		if err != nil {
+			log.Println(err)
+			return // TODO handle error
+		}
+	} else {
+		c.handleProficiencyStep(s, i)
+	}
+}
+
+func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	_, err = c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepProficiency,
+	})
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
@@ -525,7 +626,6 @@ func (c *Character) handleProficincyStep(s *discordgo.Session, i *discordgo.Inte
 	if err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 // Gets the current state for returning before setting the input state
@@ -589,11 +689,27 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	log.Println("Starting new choices")
 	choices := make([]*charChoice, number)
 
-	for idx := 0; idx < 4; idx++ {
-		choices[idx] = &charChoice{
-			Race:  races[rand.Intn(len(races))],
-			Class: classes[rand.Intn(len(classes))],
+	var bard *entities.Class
+	for _, class := range classes {
+		if class.Key == "bard" {
+			bard = class
+			break
 		}
+	}
+	for idx := 0; idx < number-1; idx++ {
+		rand.Seed(time.Now().UnixNano())
+		class := classes[rand.Intn(len(classes))]
+		time.Sleep(1 * time.Nanosecond)
+		rand.Seed(time.Now().UnixNano())
+		race := races[rand.Intn(len(races))]
+		choices[idx] = &charChoice{
+			Race:  race,
+			Class: class,
+		}
+	}
+	choices[number-1] = &charChoice{
+		Race:  races[rand.Intn(len(races))],
+		Class: bard,
 	}
 
 	return choices, nil

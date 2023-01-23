@@ -49,20 +49,20 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 	return &entities.Class{
 		Key:                input.Key,
 		Name:               input.Name,
-		ProficiencyChoices: apiChoicesToProficiencyChoices(input.ProficiencyChoices),
+		ProficiencyChoices: apiChoicesToChoices(input.ProficiencyChoices),
 	}
 }
 
-func apiChoicesToProficiencyChoices(input []*apiEntities.ChoiceOption) []*entities.ProficiencyChoices {
-	output := make([]*entities.ProficiencyChoices, len(input))
+func apiChoicesToChoices(input []*apiEntities.ChoiceOption) []*entities.Choice {
+	output := make([]*entities.Choice, len(input))
 	for i, apiChoice := range input {
-		output[i] = apiChoiceOptionsToProcicincies(apiChoice)
+		output[i] = apiChoiceOptionToChoice(apiChoice)
 	}
 
 	return output
 }
 
-func apiChoiceOptionsToProcicincies(input *apiEntities.ChoiceOption) *entities.ProficiencyChoices {
+func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 	if input == nil {
 		return nil
 	}
@@ -71,18 +71,21 @@ func apiChoiceOptionsToProcicincies(input *apiEntities.ChoiceOption) *entities.P
 		return nil
 	}
 
-	output := make([]*entities.Proficiency, len(input.OptionList.Options))
+	output := make([]entities.Option, len(input.OptionList.Options))
+
 	for i, apiProficiency := range input.OptionList.Options {
-		output[i] = apiChoiceOptionToProficiency(apiProficiency)
+		output[i] = apiOptionToOption(apiProficiency)
 	}
 
-	return &entities.ProficiencyChoices{
-		Count: input.ChoiceCount,
-		From:  output,
+	return &entities.Choice{
+		Count:   input.ChoiceCount,
+		Name:    "Choice",
+		Key:     "choice",
+		Options: output,
 	}
 }
 
-func apiChoiceOptionToProficiency(input apiEntities.Option) *entities.Proficiency {
+func apiOptionToOption(input apiEntities.Option) entities.Option {
 	switch input.GetOptionType() {
 	case apiEntities.OptionTypeReference:
 		item := input.(*apiEntities.ReferenceOption)
@@ -90,12 +93,57 @@ func apiChoiceOptionToProficiency(input apiEntities.Option) *entities.Proficienc
 			return nil
 		}
 
-		return &entities.Proficiency{
-			Key:  item.Reference.Key,
-			Name: item.Reference.Name,
+		return &entities.ReferenceOption{
+			Reference: apiReferenceItemToReferenceItem(item.Reference),
+		}
+	case apiEntities.OptionTypeChoice:
+		item := input.(*apiEntities.ChoiceOption)
+		if item.OptionList == nil {
+			return nil
+		}
+
+		options := make([]entities.Option, len(item.OptionList.Options))
+		for i, apiOption := range item.OptionList.Options {
+			options[i] = apiOptionToOption(apiOption)
+		}
+
+		return &entities.Choice{
+			Count:   item.ChoiceCount,
+			Options: options,
+		}
+	case apiEntities.OptionalTypeCountedReference:
+		item := input.(*apiEntities.CountedReferenceOption)
+		if item.Reference == nil {
+			return nil
+		}
+
+		return &entities.CountedReferenceOption{
+			Count:     item.Count,
+			Reference: apiReferenceItemToReferenceItem(item.Reference),
+		}
+	case apiEntities.OptionTypeMultiple:
+		item := input.(*apiEntities.MultipleOption)
+		if item.Items == nil {
+			return nil
+		}
+
+		options := make([]entities.Option, len(item.Items))
+		for i, apiOption := range item.Items {
+			options[i] = apiOptionToOption(apiOption)
+		}
+
+		return &entities.MultipleOption{
+			Items: options,
 		}
 	default:
 		log.Println("Unknown option type: ", input.GetOptionType())
 		return nil
+	}
+}
+
+func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *entities.ReferenceItem {
+	return &entities.ReferenceItem{
+		Key:  input.Key,
+		Name: input.Name,
 	}
 }
