@@ -91,6 +91,7 @@ func (m *manager) Get(ctx context.Context, id string) (*entities.Character, erro
 	return m.characterFromData(ctx, data)
 }
 
+// TODO: Move to state manager
 func (m *manager) SaveState(ctx context.Context, state *entities.CharacterCreation) (*entities.CharacterCreation, error) {
 	if state == nil {
 		return nil, dnderr.NewMissingParameterError("state")
