@@ -3,6 +3,8 @@ package characters
 import (
 	"context"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_creation"
+
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
@@ -10,12 +12,14 @@ import (
 )
 
 type manager struct {
-	charRepo character.Repository
-	client   dnd5e.Client
+	charRepo  character.Repository
+	stateRepo character_creation.Repository
+	client    dnd5e.Client
 }
 
 type Config struct {
 	CharacterRepo character.Repository
+	StateRepo     character_creation.Repository
 	Client        dnd5e.Client
 }
 
@@ -32,9 +36,14 @@ func New(cfg *Config) (Manager, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.CharacterRepo")
 	}
 
+	if cfg.StateRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.StateRepo")
+	}
+
 	return &manager{
-		charRepo: cfg.CharacterRepo,
-		client:   cfg.Client,
+		charRepo:  cfg.CharacterRepo,
+		stateRepo: cfg.StateRepo,
+		client:    cfg.Client,
 	}, nil
 }
 
@@ -80,4 +89,34 @@ func (m *manager) Get(ctx context.Context, id string) (*entities.Character, erro
 	}
 
 	return m.characterFromData(ctx, data)
+}
+
+func (m *manager) SaveState(ctx context.Context, state *entities.CharacterCreation) (*entities.CharacterCreation, error) {
+	if state == nil {
+		return nil, dnderr.NewMissingParameterError("state")
+	}
+
+	if state.CharacterID == "" {
+		return nil, dnderr.NewMissingParameterError("state.CharacterID")
+	}
+
+	result, err := m.stateRepo.Put(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *manager) GetState(ctx context.Context, characterID string) (*entities.CharacterCreation, error) {
+	if characterID == "" {
+		return nil, dnderr.NewMissingParameterError("characterID")
+	}
+
+	result, err := m.stateRepo.Get(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
