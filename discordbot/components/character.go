@@ -502,11 +502,21 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 	msg := fmt.Sprintf("Select %d starting proficiencies:", selectedChoice.Count)
 
 	options := make([]discordgo.SelectMenuOption, len(selectedChoice.Options))
+	log.Println("len: ", len(selectedChoice.Options))
 	for idx, choice := range selectedChoice.Options {
-		options[idx] = discordgo.SelectMenuOption{
-			Label: choice.GetName(),
-			Value: fmt.Sprintf("choice:%s", choice.GetKey()),
+		if choice.GetOptionType() == entities.OptionTypeChoice {
+			log.Println("choice: ", choice.GetName())
+			options[idx] = discordgo.SelectMenuOption{
+				Label: choice.GetName(),
+				Value: fmt.Sprintf("choice:%s:%d", choice.GetKey(), idx),
+			}
+		} else {
+			options[idx] = discordgo.SelectMenuOption{
+				Label: choice.GetName(),
+				Value: fmt.Sprintf("choice:%s", choice.GetKey()),
+			}
 		}
+
 	}
 
 	components := []discordgo.MessageComponent{
@@ -721,10 +731,10 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	log.Println("Starting new choices")
 	choices := make([]*charChoice, number)
 
-	var bard *entities.Class
+	var monk *entities.Class
 	for _, class := range classes {
-		if class.Key == "bard" {
-			bard = class
+		if class.Key == "monk" {
+			monk = class
 			break
 		}
 	}
@@ -741,7 +751,7 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	}
 	choices[number-1] = &charChoice{
 		Race:  races[rand.Intn(len(races))],
-		Class: bard,
+		Class: monk,
 	}
 
 	return choices, nil
