@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 
 	"github.com/go-redis/redis/v9"
@@ -23,6 +25,7 @@ type characterSuite struct {
 	mockUuider  *types.MockUUID
 	id          string
 	data        *Data
+	character   *entities.Character
 	jsonPayload string
 }
 
@@ -32,14 +35,18 @@ func (s *characterSuite) SetupTest() {
 	s.redisMock = redisMock
 	s.mockUuider = &types.MockUUID{}
 	s.id = "1234"
-
-	s.data = &Data{
-		ID:       s.id,
-		OwnerID:  s.id,
-		Name:     "Test Character",
-		RaceKey:  "elf",
-		ClassKey: "fighter",
+	s.character = &entities.Character{
+		ID:      s.id,
+		OwnerID: s.id,
+		Name:    "Test Character",
+		Race: &entities.Race{
+			Key: "elf",
+		},
+		Class: &entities.Class{
+			Key: "fighter",
+		},
 	}
+	s.data = characterToData(s.character)
 
 	jsonString := dataToJSON(s.data)
 	s.jsonPayload = jsonString
@@ -78,16 +85,16 @@ func (s *characterSuite) TestGetCharacterNotFound() {
 func (s *characterSuite) TestCreateCharacter() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetVal("OK")
 
-	result, err := s.fixture.Put(s.ctx, s.data)
+	result, err := s.fixture.Put(s.ctx, s.character)
 	s.NoError(err)
 	s.NotNil(result)
-	s.Equal(s.data, result)
+	s.Equal(s.character, result)
 }
 
 func (s *characterSuite) TestCreateCharacterError() {
 	s.redisMock.ExpectSet(getCharacterKey(s.id), s.jsonPayload, 0).SetErr(errors.New("test error"))
 
-	result, err := s.fixture.Put(s.ctx, s.data)
+	result, err := s.fixture.Put(s.ctx, s.character)
 	s.Error(err)
 	s.EqualError(err, "test error")
 	s.Nil(result)

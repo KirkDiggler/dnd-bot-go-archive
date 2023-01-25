@@ -73,104 +73,17 @@ func characterToData(input *entities.Character) *Data {
 	}
 
 	return &Data{
-		ID:       input.ID,
-		OwnerID:  input.OwnerID,
-		Name:     input.Name,
-		RaceKey:  raceKey,
-		ClassKey: classKey,
-		Class: &ClassData{
-			Key:                classKey,
-			ProficiencyChoices: input.Class.ProficiencyChoices,
-		},
+		ID:            input.ID,
+		OwnerID:       input.OwnerID,
+		Name:          input.Name,
+		RaceKey:       raceKey,
+		ClassKey:      classKey,
 		Attributes:    data,
 		Rolls:         rollResultsToRollDatas(input.Rolls),
 		Proficiencies: proficiencies,
 	}
 }
-func multipleOptionToData(input *entities.MultipleOption) *MultipleOption {
-	return &MultipleOption{
-		Selected: input.Selected,
-		Items:    optionsToDatas(input.Items),
-	}
-}
 
-func optionsToDatas(input []entities.Option) []*Option {
-	out := make([]*Option, len(input))
-	for i, opt := range input {
-		out[i] = optionToData(opt)
-	}
-
-	return out
-}
-func optionToData(input entities.Option) *Option {
-	switch input.GetOptionType() {
-	case entities.OptionTypeChoice:
-		return &Option{
-			Choice: ChoiceToData(input.(*entities.Choice)),
-		}
-	case entities.OptionTypeMultiple:
-		return &Option{
-			Multiple: multipleOptionToData(input.(*entities.MultipleOption)),
-		}
-	case entities.OptionTypeReference:
-		return &Option{
-			Reference: referenceItemToData(input.(*entities.ReferenceOption)),
-		}
-	case entities.OptionTypeCountedReference:
-		return &Option{
-			CountedReference: countedReferenceItemToData(input.(*entities.CountedReferenceOption)),
-		}
-	default:
-		log.Println("Unknown option type")
-		return nil
-	}
-}
-
-func countedReferenceItemToData(input *entities.CountedReferenceOption) *CountedReferenceOption {
-	if input == nil {
-		return nil
-	}
-
-	if input.Reference == nil {
-		return nil
-	}
-
-	return &CountedReferenceOption{
-		Count: input.Count,
-		Reference: &ReferenceItem{
-			Key: input.Reference.Key,
-		},
-	}
-}
-func referenceItemToData(input *entities.ReferenceOption) *ReferenceOption {
-	if input == nil {
-		return nil
-	}
-
-	if input.Reference == nil {
-		return nil
-	}
-
-	return &ReferenceOption{
-		&ReferenceItem{
-			Key: input.Reference.Key,
-		},
-	}
-}
-func ChoiceToData(input *entities.Choice) *Choice {
-	choice := &Choice{
-		Count:    input.Count,
-		Selected: input.Selected,
-		Name:     input.Name,
-	}
-
-	choice.Options = make([]*Option, len(input.Options))
-	for i, opt := range input.Options {
-		choice.Options[i] = optionToData(opt)
-	}
-
-	return choice
-}
 func rollResultToRollData(result *dice.RollResult) *RollData {
 	if result == nil {
 

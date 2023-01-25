@@ -9,12 +9,31 @@ const (
 	OptionTypeCountedReference OptionType = "counted_reference"
 )
 
+type ChoiceStatus string
+
+const (
+	ChoiceStatusUnset  ChoiceStatus = ""
+	ChoiceStatusActive ChoiceStatus = "active"
+	ChoiceStatusUsed   ChoiceStatus = "used"
+)
+
+type ChoiceType string
+
+const (
+	ChoiceTypeUnset       ChoiceType = ""
+	ChoiceTypeProficiency ChoiceType = "proficiency"
+	ChoiceTypeLanguage    ChoiceType = "language"
+	ChoiceTypeEquipment   ChoiceType = "equipment"
+)
+
 type Choice struct {
-	Name     string   `json:"name"`
-	Key      string   `json:"key"`
-	Selected bool     `json:"selected"`
-	Count    int      `json:"count"`
-	Options  []Option `json:"options"`
+	Name     string       `json:"name"`
+	Type     ChoiceType   `json:"type"`
+	Key      string       `json:"key"`
+	Status   ChoiceStatus `json:"status"`
+	Selected bool         `json:"selected"`
+	Count    int          `json:"count"`
+	Options  []Option     `json:"options"`
 }
 type Option interface {
 	GetOptionType() OptionType
@@ -23,6 +42,7 @@ type Option interface {
 }
 
 type CountedReferenceOption struct {
+	Status    ChoiceStatus   `json:"status"`
 	Count     int            `json:"count"`
 	Reference *ReferenceItem `json:"reference"`
 }
@@ -40,6 +60,7 @@ func (o *CountedReferenceOption) GetKey() string {
 }
 
 type ReferenceOption struct {
+	Status    ChoiceStatus   `json:"status"`
 	Reference *ReferenceItem `json:"reference"`
 }
 
@@ -68,8 +89,8 @@ func (o *Choice) GetKey() string {
 }
 
 type MultipleOption struct {
-	Selected bool     `json:"selected"`
-	Items    []Option `json:"items"`
+	Status ChoiceStatus `json:"status"`
+	Items  []Option     `json:"items"`
 }
 
 func (o *MultipleOption) GetOptionType() OptionType {

@@ -1,21 +1,14 @@
 package character
 
-import "github.com/KirkDiggler/dnd-bot-go/internal/entities"
-
 type Data struct {
 	ID            string         `json:"id"`
 	OwnerID       string         `json:"owner_id"`
 	Name          string         `json:"name"`
 	ClassKey      string         `json:"class_key"`
-	Class         *ClassData     `json:"class"`
 	RaceKey       string         `json:"race_key"`
 	Attributes    *AttributeData `json:"attributes"`
 	Rolls         []*RollData    `json:"rolls"`
 	Proficiencies []*Proficiency `json:"proficiencies"`
-}
-type ClassData struct {
-	Key                string             `json:"key"`
-	ProficiencyChoices []*entities.Choice `json:"proficiency_choices"`
 }
 
 type RollData struct {
