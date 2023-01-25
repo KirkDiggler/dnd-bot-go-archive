@@ -12,9 +12,9 @@ const (
 type ChoiceStatus string
 
 const (
-	ChoiceStatusUnset  ChoiceStatus = ""
-	ChoiceStatusActive ChoiceStatus = "active"
-	ChoiceStatusUsed   ChoiceStatus = "used"
+	ChoiceStatusUnset    ChoiceStatus = ""
+	ChoiceStatusActive   ChoiceStatus = "active"
+	ChoiceStatusSelected ChoiceStatus = "selected"
 )
 
 type ChoiceType string

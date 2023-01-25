@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/go-redis/redis/v9"
 
@@ -21,7 +23,7 @@ type choiceSuite struct {
 	fixture     *redisRepo
 	redisMock   redismock.ClientMock
 	characterID string
-	choiceType  Type
+	choiceType  entities.ChoiceType
 	data        *Data
 	jsonPayload string
 }
@@ -31,14 +33,14 @@ func (s *choiceSuite) SetupTest() {
 	client, redisMock := redismock.NewClientMock()
 	s.redisMock = redisMock
 	s.characterID = "1234"
-	s.choiceType = TypeEquipment
+	s.choiceType = entities.ChoiceTypeEquipment
 	s.data = &Data{
 		CharacterID: s.characterID,
-		Type:        s.choiceType,
+		Type:        choiceTypeToType(s.choiceType),
 		Choices: []*Choice{{
 			Name:   "(a) a martial weapon and a shield or (b) two martial weapons",
 			Count:  1,
-			Type:   TypeEquipment,
+			Type:   choiceTypeToType(s.choiceType),
 			Status: StatusActive,
 			Options: []*Option{{
 				Multiple: &MultipleOption{
@@ -47,7 +49,7 @@ func (s *choiceSuite) SetupTest() {
 						Choice: &Choice{
 							Name:   "a martial weapon",
 							Count:  1,
-							Type:   TypeEquipment,
+							Type:   choiceTypeToType(s.choiceType),
 							Status: StatusSelected,
 							Options: []*Option{{
 								Reference: &ReferenceOption{
@@ -81,7 +83,7 @@ func (s *choiceSuite) SetupTest() {
 				Choice: &Choice{
 					Name:  "two martial weapons",
 					Count: 2,
-					Type:  TypeEquipment,
+					Type:  choiceTypeToType(s.choiceType),
 					Options: []*Option{{
 						Reference: &ReferenceOption{
 							Reference: &ReferenceItem{

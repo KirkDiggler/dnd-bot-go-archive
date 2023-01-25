@@ -26,16 +26,41 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 	}
 
 	return &entities.Character{
-		ID:        data.ID,
-		Name:      data.Name,
-		OwnerID:   data.OwnerID,
-		Race:      race,
-		Class:     class,
-		Attribues: attributDataToAttributes(data.Attributes),
-		Rolls:     rollDatasToRollResults(data.Rolls),
+		ID:            data.ID,
+		Name:          data.Name,
+		OwnerID:       data.OwnerID,
+		Race:          race,
+		Class:         class,
+		Attribues:     attributDataToAttributes(data.Attributes),
+		Rolls:         rollDatasToRollResults(data.Rolls),
+		Proficiencies: datasToProficiencies(data.Proficiencies),
 	}, nil
 }
 
+func datasToProficiencies(data []*character.Proficiency) []*entities.Proficiency {
+	if data == nil {
+		return nil
+	}
+
+	proficiencies := make([]*entities.Proficiency, 0, len(data))
+	for _, d := range data {
+		proficiencies = append(proficiencies, dataToProficiency(d))
+	}
+
+	return proficiencies
+
+}
+
+func dataToProficiency(data *character.Proficiency) *entities.Proficiency {
+	if data == nil {
+		return nil
+	}
+
+	return &entities.Proficiency{
+		Name: data.Name,
+		Key:  data.Key,
+	}
+}
 func attributDataToAttributes(data *character.AttributeData) map[entities.Attribute]*entities.AbilityScore {
 	if data == nil {
 		data = &character.AttributeData{}

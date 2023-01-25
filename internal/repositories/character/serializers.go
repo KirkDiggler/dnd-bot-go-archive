@@ -67,11 +67,6 @@ func characterToData(input *entities.Character) *Data {
 		}
 	}
 
-	proficiencies := make([]*Proficiency, len(input.Proficiencies))
-	for i, prof := range input.Proficiencies {
-		proficiencies[i] = proficiencyToData(prof)
-	}
-
 	return &Data{
 		ID:            input.ID,
 		OwnerID:       input.OwnerID,
@@ -80,7 +75,7 @@ func characterToData(input *entities.Character) *Data {
 		ClassKey:      classKey,
 		Attributes:    data,
 		Rolls:         rollResultsToRollDatas(input.Rolls),
-		Proficiencies: proficiencies,
+		Proficiencies: proficienciesToDatas(input.Proficiencies),
 	}
 }
 
@@ -106,8 +101,18 @@ func rollResultsToRollDatas(results []*dice.RollResult) []*RollData {
 	return data
 }
 
+func proficienciesToDatas(input []*entities.Proficiency) []*Proficiency {
+	data := make([]*Proficiency, len(input))
+	for i, p := range input {
+		data[i] = proficiencyToData(p)
+	}
+
+	return data
+}
+
 func proficiencyToData(input *entities.Proficiency) *Proficiency {
 	return &Proficiency{
-		Key: input.Key,
+		Key:  input.Key,
+		Name: input.Name,
 	}
 }

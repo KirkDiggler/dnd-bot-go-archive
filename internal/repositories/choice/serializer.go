@@ -241,7 +241,7 @@ func choiceStatusToStatus(input entities.ChoiceStatus) Status {
 	switch input {
 	case entities.ChoiceStatusActive:
 		return StatusActive
-	case entities.ChoiceStatusUsed:
+	case entities.ChoiceStatusSelected:
 		return StatusSelected
 	default:
 		return StatusUnset
@@ -253,7 +253,7 @@ func statusToChoiceStatus(input Status) entities.ChoiceStatus {
 	case StatusActive:
 		return entities.ChoiceStatusActive
 	case StatusSelected:
-		return entities.ChoiceStatusUsed
+		return entities.ChoiceStatusSelected
 	default:
 		return entities.ChoiceStatusUnset
 	}

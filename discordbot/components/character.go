@@ -463,13 +463,12 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 }
 
 // Selecting proficiency options
-func (c *Character) generateProficiencyChoices(char *entities.Character) (string, []discordgo.MessageComponent, error) {
+func (c *Character) generateProficiencyChoices(char *entities.Character, choices []*entities.Choice) (string, []discordgo.MessageComponent, error) {
 	if char.Class == nil {
 		log.Println("Class is nil")
 		return "", nil, errors.New("class is nil")
 	}
 
-	choices := char.Class.ProficiencyChoices
 	if len(choices) == 0 {
 		log.Println("No proficiency choices")
 		return "", nil, errors.New("no proficiency choices")
@@ -482,10 +481,17 @@ func (c *Character) generateProficiencyChoices(char *entities.Character) (string
 			return "", nil, errors.New("no proficiency choices")
 		}
 
-		if !choice.Selected {
+		if choice.Status != entities.ChoiceStatusSelected {
+			choice.Status = entities.ChoiceStatusActive
 			selectedChoice = choice
 			break
 		}
+	}
+
+	err := c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
+	if err != nil {
+		log.Println(err)
+		return "", nil, err
 	}
 
 	if selectedChoice == nil {
@@ -532,16 +538,18 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 		return // TODO handle error
 	}
 
-	classChoices := char.Class.ProficiencyChoices
-	if len(classChoices) == 0 {
-		log.Println("No proficiency choices")
+	choices, err := c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)
+	if err != nil {
+		log.Println(err)
 		return // TODO handle error
 	}
 
 	var done bool
-	for _, choice := range classChoices {
-		if !choice.Selected {
-			choice.Selected = true
+	for _, choice := range choices {
+		if choice.Status == entities.ChoiceStatusActive {
+			choice.Status = entities.ChoiceStatusSelected
+
+			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
 				char.AddProficiency(&entities.Proficiency{
 					Key: strings.Split(value, ":")[1],
@@ -549,7 +557,14 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 			}
 			break
 		}
+
 		done = true
+	}
+
+	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
 	_, err = c.charManager.Put(context.Background(), char)
@@ -594,7 +609,7 @@ func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.Int
 		return // TODO handle error
 	}
 
-	_, err = c.getAndUpdateState(&entities.CharacterCreation{
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,
 		LastToken:   i.Token,
 		Step:        entities.CreateStepProficiency,
@@ -604,7 +619,24 @@ func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.Int
 		return // TODO handle error
 	}
 
-	msg, components, err := c.generateProficiencyChoices(char)
+	var choices []*entities.Choice
+
+	if state.Step == entities.CreateStepRoll {
+		choices = char.Class.ProficiencyChoices
+
+	} else {
+		var choicesErr error
+		choices, choicesErr = c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)
+		if choicesErr != nil {
+			var notFoundErr *dnderr.NotFoundError
+			if !errors.Is(choicesErr, notFoundErr) {
+				log.Println(choicesErr)
+				return // TODO handle error
+			}
+		}
+	}
+
+	msg, components, err := c.generateProficiencyChoices(char, choices)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error

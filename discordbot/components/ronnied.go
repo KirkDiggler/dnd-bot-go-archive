@@ -126,7 +126,7 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 
 				result := grabBag[rand.Intn(len(grabBag))]
 
-				log.Printf(result)
+				log.Println(result)
 
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,

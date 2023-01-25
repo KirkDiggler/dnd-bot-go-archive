@@ -79,7 +79,7 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 
 	return &entities.Choice{
 		Count:   input.ChoiceCount,
-		Name:    "Choice",
+		Name:    input.Description,
 		Key:     "choice",
 		Options: output,
 	}
@@ -145,5 +145,6 @@ func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *entities
 	return &entities.ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
+		Type: input.Type,
 	}
 }

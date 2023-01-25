@@ -3,6 +3,9 @@ package choice
 import (
 	"context"
 	"fmt"
+	"log"
+
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
@@ -33,7 +36,7 @@ func New(cfg *Config) (Repository, error) {
 	}, nil
 }
 
-func getChoiceKey(id string, choiceType Type) string {
+func getChoiceKey(id string, choiceType entities.ChoiceType) string {
 	return fmt.Sprintf("choice:%s:%s", id, choiceType)
 }
 
@@ -58,11 +61,12 @@ func (r *redisRepo) Get(ctx context.Context, input *GetInput) (*GetOutput, error
 
 		return nil, result.Err()
 	}
-
-	data := jsonToData(result.Val())
+	jsonResult := result.Val()
+	log.Printf("Getting choices for key: %s", getChoiceKey(input.CharacterID, input.Type))
+	data := jsonToData(jsonResult)
 	return &GetOutput{
 		CharacterID: data.CharacterID,
-		Type:        data.Type,
+		Type:        typeToChoiceType(data.Type),
 		Choices:     datasToChoices(data.Choices),
 	}, nil
 }
@@ -87,11 +91,13 @@ func (r *redisRepo) Put(ctx context.Context, input *PutInput) error {
 	choices := choicesToDatas(input.Choices)
 	data := &Data{
 		CharacterID: input.CharacterID,
-		Type:        input.Type,
+		Type:        choiceTypeToType(input.Type),
 		Choices:     choices,
 	}
 
-	result := r.client.Set(context.Background(), getChoiceKey(input.CharacterID, input.Type), dataToJSON(data), 0)
+	jsonData := dataToJSON(data)
+	log.Printf("Saving choices for key: %s", getChoiceKey(input.CharacterID, input.Type))
+	result := r.client.Set(context.Background(), getChoiceKey(input.CharacterID, input.Type), jsonData, 0)
 	if result.Err() != nil {
 		return result.Err()
 	}

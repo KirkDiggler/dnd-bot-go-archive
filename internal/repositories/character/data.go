@@ -29,7 +29,8 @@ type AttributeData struct {
 }
 
 type Proficiency struct {
-	Key string `json:"key"`
+	Key  string `json:"key"`
+	Name string `json:"name,omitempty"`
 }
 
 type ProficiencyChoice struct {
