@@ -462,6 +462,43 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	c.handleRollCharacter(s, i)
 }
 
+// Go through choices, searching the active path and return the first unset options
+func (c *Character) getNextChoiceOptions(choices []*entities.Choice) (*entities.Choice, error) {
+	if len(choices) == 0 {
+		return nil, errors.New("no choices")
+	}
+
+	var selectedChoice *entities.Choice
+
+	for _, choice := range choices {
+		if len(choice.Options) == 0 {
+			log.Println("No proficiency choices")
+			return nil, errors.New("no proficiency choices")
+		}
+
+		switch choice.Status {
+		case entities.ChoiceStatusUnset:
+			choice.Status = entities.ChoiceStatusActive
+			selectedChoice = choice
+		case entities.ChoiceStatusActive:
+			for _, option := range choice.Options {
+				if option.GetOptionType() == entities.OptionTypeChoice {
+					choice.Status = entities.ChoiceStatusSelected
+
+				}
+			}
+		}
+
+		if choice.Status != entities.ChoiceStatusSelected {
+			choice.Status = entities.ChoiceStatusActive
+			selectedChoice = choice
+			break
+		}
+	}
+
+	return selectedChoice, nil
+}
+
 // Selecting proficiency options
 func (c *Character) generateProficiencyChoices(char *entities.Character, choices []*entities.Choice) (string, []discordgo.MessageComponent, error) {
 	if char.Class == nil {
@@ -508,12 +545,12 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 			log.Println("choice: ", choice.GetName())
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
-				Value: fmt.Sprintf("choice:%s:%d", choice.GetKey(), idx),
+				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
 			}
 		} else {
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
-				Value: fmt.Sprintf("choice:%s", choice.GetKey()),
+				Value: fmt.Sprintf("%s:%s", choice.GetOptionType(), choice.GetKey()),
 			}
 		}
 
@@ -561,8 +598,13 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 
 			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
+				parts := strings.Split(value, ":")
+				if parts[0] == string(entities.OptionTypeChoice) {
+					// if we have a choice, we will check which was choses, set that to active and pass that choice back in
+
+				}
 				char.AddProficiency(&entities.Proficiency{
-					Key: strings.Split(value, ":")[1],
+					Key: parts[1],
 				})
 			}
 			break

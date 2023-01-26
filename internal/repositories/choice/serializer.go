@@ -96,6 +96,7 @@ func referenceOptionToData(input *entities.ReferenceOption) *ReferenceOption {
 		Reference: referenceItemToData(input.Reference),
 	}
 }
+
 func dataToChoice(input *Choice) *entities.Choice {
 	choice := &entities.Choice{
 		Type:   typeToChoiceType(input.Type),
@@ -107,6 +108,30 @@ func dataToChoice(input *Choice) *entities.Choice {
 	choice.Options = make([]entities.Option, len(input.Options))
 	for i, opt := range input.Options {
 		choice.Options[i] = dataToOption(opt)
+	}
+
+	return choice
+}
+func choicesToDatas(input []*entities.Choice) []*Choice {
+	out := make([]*Choice, len(input))
+	for i, choice := range input {
+		out[i] = choiceToData(choice)
+	}
+
+	return out
+}
+
+func choiceToData(input *entities.Choice) *Choice {
+	choice := &Choice{
+		Type:   choiceTypeToType(input.Type),
+		Count:  input.Count,
+		Status: choiceStatusToStatus(input.Status),
+		Name:   input.Name,
+	}
+
+	choice.Options = make([]*Option, len(input.Options))
+	for i, opt := range input.Options {
+		choice.Options[i] = optionToData(opt)
 	}
 
 	return choice
@@ -179,14 +204,6 @@ func dataToOption(input *Option) entities.Option {
 
 	return nil
 }
-func choicesToDatas(input []*entities.Choice) []*Choice {
-	out := make([]*Choice, len(input))
-	for i, choice := range input {
-		out[i] = choiceToData(choice)
-	}
-
-	return out
-}
 
 func referenceItemToData(input *entities.ReferenceItem) *ReferenceItem {
 	if input == nil {
@@ -221,24 +238,10 @@ func datasToChoices(input []*Choice) []*entities.Choice {
 	return out
 }
 
-func choiceToData(input *entities.Choice) *Choice {
-	choice := &Choice{
-		Type:   choiceTypeToType(input.Type),
-		Count:  input.Count,
-		Status: choiceStatusToStatus(input.Status),
-		Name:   input.Name,
-	}
-
-	choice.Options = make([]*Option, len(input.Options))
-	for i, opt := range input.Options {
-		choice.Options[i] = optionToData(opt)
-	}
-
-	return choice
-}
-
 func choiceStatusToStatus(input entities.ChoiceStatus) Status {
 	switch input {
+	case entities.ChoiceStatusInactive:
+		return StatusInactive
 	case entities.ChoiceStatusActive:
 		return StatusActive
 	case entities.ChoiceStatusSelected:
@@ -250,6 +253,8 @@ func choiceStatusToStatus(input entities.ChoiceStatus) Status {
 
 func statusToChoiceStatus(input Status) entities.ChoiceStatus {
 	switch input {
+	case StatusInactive:
+		return entities.ChoiceStatusInactive
 	case StatusActive:
 		return entities.ChoiceStatusActive
 	case StatusSelected:

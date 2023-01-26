@@ -29,6 +29,7 @@ type Status string
 const (
 	StatusUnset    Status = ""
 	StatusActive   Status = "active"
+	StatusInactive Status = "inactive"
 	StatusSelected Status = "selected"
 )
 

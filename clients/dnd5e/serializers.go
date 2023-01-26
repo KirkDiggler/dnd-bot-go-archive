@@ -80,8 +80,23 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 	return &entities.Choice{
 		Count:   input.ChoiceCount,
 		Name:    input.Description,
+		Type:    apiChoiceTypeToChoiceType(input.ChoiceType),
 		Key:     "choice",
 		Options: output,
+	}
+}
+
+func apiChoiceTypeToChoiceType(input string) entities.ChoiceType {
+	switch input {
+	case "proficiencies":
+		return entities.ChoiceTypeProficiency
+	case "equipment":
+		return entities.ChoiceTypeEquipment
+	case "languages":
+		return entities.ChoiceTypeLanguage
+	default:
+		log.Println("Unknown choice type: ", input)
+		return entities.ChoiceTypeUnset
 	}
 }
 
@@ -98,19 +113,8 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 		}
 	case apiEntities.OptionTypeChoice:
 		item := input.(*apiEntities.ChoiceOption)
-		if item.OptionList == nil {
-			return nil
-		}
 
-		options := make([]entities.Option, len(item.OptionList.Options))
-		for i, apiOption := range item.OptionList.Options {
-			options[i] = apiOptionToOption(apiOption)
-		}
-
-		return &entities.Choice{
-			Count:   item.ChoiceCount,
-			Options: options,
-		}
+		return apiChoiceOptionToChoice(item)
 	case apiEntities.OptionalTypeCountedReference:
 		item := input.(*apiEntities.CountedReferenceOption)
 		if item.Reference == nil {

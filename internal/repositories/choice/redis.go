@@ -96,7 +96,7 @@ func (r *redisRepo) Put(ctx context.Context, input *PutInput) error {
 	}
 
 	jsonData := dataToJSON(data)
-	log.Printf("Saving choices for key: %s", getChoiceKey(input.CharacterID, input.Type))
+	log.Printf("Saving choices %s for key: %s", jsonData, getChoiceKey(input.CharacterID, input.Type))
 	result := r.client.Set(context.Background(), getChoiceKey(input.CharacterID, input.Type), jsonData, 0)
 	if result.Err() != nil {
 		return result.Err()

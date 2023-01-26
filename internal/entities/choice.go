@@ -14,6 +14,7 @@ type ChoiceStatus string
 const (
 	ChoiceStatusUnset    ChoiceStatus = ""
 	ChoiceStatusActive   ChoiceStatus = "active"
+	ChoiceStatusInactive ChoiceStatus = "inactive"
 	ChoiceStatusSelected ChoiceStatus = "selected"
 )
 
