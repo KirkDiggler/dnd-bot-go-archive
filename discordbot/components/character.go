@@ -364,7 +364,6 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 
 // Selecting a character
 func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("handleRandomStart called")
 	choices, err := c.startNewChoices(4)
 	if err != nil {
 		log.Println(err)
@@ -467,8 +466,6 @@ func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choic
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
-
-	log.Println("getNextChoiceOption called, choice: ", input.GetName(), " status: ", input.Status, " options: ", len(input.Options))
 	switch input.Status {
 	case entities.ChoiceStatusUnset:
 		return input, nil
@@ -493,7 +490,6 @@ func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choic
 
 // Selecting proficiency options
 func (c *Character) generateProficiencyChoices(char *entities.Character, choices []*entities.Choice) (string, []discordgo.MessageComponent, error) {
-	log.Println("generateProficiencyChoices called")
 	if char.Class == nil {
 		log.Println("Class is nil")
 		return "", nil, errors.New("class is nil")
@@ -545,7 +541,6 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 
 	for idx, choice := range selectedChoice.Options {
 		if choice.GetOptionType() == entities.OptionTypeChoice {
-			log.Println("choice: ", choice.GetName())
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
 				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
@@ -572,7 +567,6 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 }
 
 func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("handleProficiencySelect called")
 	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,
 		LastToken:   i.Token,
@@ -627,7 +621,6 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 			// gross, but I need to get the last choice to set other options inactive
 			if selectedChoiceIndex >= 0 {
 				choice.Status = entities.ChoiceStatusActive
-				log.Println("choice: ", choice.GetName(), " index ", selectedChoiceIndex)
 				for idx, option := range choice.Options {
 					if option.GetOptionType() == entities.OptionTypeChoice {
 						choiceOption := option.(*entities.Choice)
@@ -642,15 +635,12 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 				}
 			}
 
-			log.Println("choice: ", choice.GetName(), " selected")
 			break
 		}
 
-		log.Println("done on choice ", choice.GetName())
 		done = true
 	}
 
-	log.Println("done: ", done)
 	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
 	if err != nil {
 		log.Println(err)
@@ -693,7 +683,6 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 }
 
 func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("handleProficiencyStep called")
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
@@ -714,7 +703,11 @@ func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.Int
 
 	if state.Step == entities.CreateStepRoll {
 		choices = char.Class.ProficiencyChoices
-
+		if char.Race != nil {
+			if char.Race.StartingProficiencyOptions != nil {
+				choices = append(choices, char.Race.StartingProficiencyOptions)
+			}
+		}
 	} else {
 		var choicesErr error
 		choices, choicesErr = c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)

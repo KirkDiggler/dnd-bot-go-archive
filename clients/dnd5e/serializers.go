@@ -40,8 +40,9 @@ func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities.Ra
 
 func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 	return &entities.Race{
-		Key:  input.Key,
-		Name: input.Name,
+		Key:                        input.Key,
+		Name:                       input.Name,
+		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
 	}
 }
 
