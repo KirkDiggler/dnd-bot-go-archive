@@ -56,7 +56,7 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*Data, error) {
 	}
 
 	data := jsonToData(result.Val())
-	log.Println("data: ", data)
+
 	return data, nil
 }
 
@@ -72,7 +72,6 @@ func (r *redisRepo) Put(ctx context.Context, character *entities.Character) (*en
 	character.ID = character.OwnerID
 
 	data := dataToJSON(characterToData(character))
-	log.Println(data)
 
 	result := r.client.Set(ctx, getCharacterKey(character.ID), data, 0)
 	if result.Err() != nil {

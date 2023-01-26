@@ -27,3 +27,17 @@ func NewNotFoundError(msg string) error {
 		Msg: msg,
 	}
 }
+
+type ResourceExhaustedError struct {
+	Msg string
+}
+
+func (e *ResourceExhaustedError) Error() string {
+	return e.Msg
+}
+
+func NewResourceExhaustedError(msg string) error {
+	return &ResourceExhaustedError{
+		Msg: msg,
+	}
+}

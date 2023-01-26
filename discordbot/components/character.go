@@ -463,44 +463,37 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 }
 
 // Go through choices, searching the active path and return the first unset options
-func (c *Character) getNextChoiceOptions(choices []*entities.Choice) (*entities.Choice, error) {
-	if len(choices) == 0 {
-		return nil, errors.New("no choices")
+func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choice, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	var selectedChoice *entities.Choice
-
-	for _, choice := range choices {
-		if len(choice.Options) == 0 {
-			log.Println("No proficiency choices")
-			return nil, errors.New("no proficiency choices")
-		}
-
-		switch choice.Status {
-		case entities.ChoiceStatusUnset:
-			choice.Status = entities.ChoiceStatusActive
-			selectedChoice = choice
-		case entities.ChoiceStatusActive:
-			for _, option := range choice.Options {
-				if option.GetOptionType() == entities.OptionTypeChoice {
-					choice.Status = entities.ChoiceStatusSelected
-
+	log.Println("getNextChoiceOption called, choice: ", input.GetName(), " status: ", input.Status, " options: ", len(input.Options))
+	switch input.Status {
+	case entities.ChoiceStatusUnset:
+		return input, nil
+	case entities.ChoiceStatusActive:
+		for _, option := range input.Options {
+			if option.GetOptionType() == entities.OptionTypeChoice {
+				optionChoice := option.(*entities.Choice)
+				if optionChoice.Status == entities.ChoiceStatusInactive {
+					continue
 				}
+
+				return c.getNextChoiceOption(optionChoice)
 			}
-		}
 
-		if choice.Status != entities.ChoiceStatusSelected {
-			choice.Status = entities.ChoiceStatusActive
-			selectedChoice = choice
-			break
+			return input, nil
 		}
+	default:
+		return nil, dnderr.NewResourceExhaustedError("no active choice")
 	}
-
-	return selectedChoice, nil
+	return nil, dnderr.NewResourceExhaustedError("no active choice")
 }
 
 // Selecting proficiency options
 func (c *Character) generateProficiencyChoices(char *entities.Character, choices []*entities.Choice) (string, []discordgo.MessageComponent, error) {
+	log.Println("generateProficiencyChoices called")
 	if char.Class == nil {
 		log.Println("Class is nil")
 		return "", nil, errors.New("class is nil")
@@ -518,11 +511,21 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 			return "", nil, errors.New("no proficiency choices")
 		}
 
-		if choice.Status != entities.ChoiceStatusSelected {
-			choice.Status = entities.ChoiceStatusActive
-			selectedChoice = choice
-			break
+		var SelectErr error
+		selectedChoice, SelectErr = c.getNextChoiceOption(choice)
+		if SelectErr != nil {
+			var exhaustedErr *dnderr.ResourceExhaustedError
+			if errors.As(SelectErr, &exhaustedErr) {
+				continue
+			}
+
+			log.Println(SelectErr)
+			return "", nil, SelectErr
 		}
+
+		selectedChoice.Status = entities.ChoiceStatusActive
+
+		break
 	}
 
 	err := c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
@@ -533,13 +536,13 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 
 	if selectedChoice == nil {
 		log.Println("No proficiency choices")
-		return "", nil, errors.New("no proficiency choices")
+		return "", nil, dnderr.NewResourceExhaustedError("no proficiency choices")
 	}
 
 	msg := fmt.Sprintf("Select %d starting proficiencies:", selectedChoice.Count)
 
 	options := make([]discordgo.SelectMenuOption, len(selectedChoice.Options))
-	log.Println("len: ", len(selectedChoice.Options))
+
 	for idx, choice := range selectedChoice.Options {
 		if choice.GetOptionType() == entities.OptionTypeChoice {
 			log.Println("choice: ", choice.GetName())
@@ -569,6 +572,7 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 }
 
 func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("handleProficiencySelect called")
 	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,
 		LastToken:   i.Token,
@@ -592,27 +596,61 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 	}
 
 	var done bool
+
 	for _, choice := range choices {
+		if choice.Status == entities.ChoiceStatusSelected {
+			continue
+		}
+
 		if choice.Status == entities.ChoiceStatusActive {
-			choice.Status = entities.ChoiceStatusSelected
+			selectedChoiceIndex := -1
 
 			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
 				parts := strings.Split(value, ":")
 				if parts[0] == string(entities.OptionTypeChoice) {
 					// if we have a choice, we will check which was choses, set that to active and pass that choice back in
-
+					// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
+					selectedChoiceIndex, err = strconv.Atoi(parts[2])
+					if err != nil {
+						log.Println(err)
+						return // TODO handle error
+					}
+				} else {
+					char.AddProficiency(&entities.Proficiency{
+						Key: parts[1],
+					})
 				}
-				char.AddProficiency(&entities.Proficiency{
-					Key: parts[1],
-				})
 			}
+			choice.Status = entities.ChoiceStatusSelected
+
+			// gross, but I need to get the last choice to set other options inactive
+			if selectedChoiceIndex >= 0 {
+				choice.Status = entities.ChoiceStatusActive
+				log.Println("choice: ", choice.GetName(), " index ", selectedChoiceIndex)
+				for idx, option := range choice.Options {
+					if option.GetOptionType() == entities.OptionTypeChoice {
+						choiceOption := option.(*entities.Choice)
+						if idx == selectedChoiceIndex {
+							log.Println("choice: ", choiceOption.GetName(), " active")
+							choiceOption.Status = entities.ChoiceStatusActive
+						} else {
+							log.Println("choice: ", choiceOption.GetName(), " inactive")
+							choiceOption.Status = entities.ChoiceStatusInactive
+						}
+					}
+				}
+			}
+
+			log.Println("choice: ", choice.GetName(), " selected")
 			break
 		}
 
+		log.Println("done on choice ", choice.GetName())
 		done = true
 	}
 
+	log.Println("done: ", done)
 	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
 	if err != nil {
 		log.Println(err)
@@ -655,6 +693,7 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 }
 
 func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("handleProficiencyStep called")
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
