@@ -1,29 +1,43 @@
 package dnderr
 
-type missingParameterError struct {
+type MissingParameterError struct {
 	Param string
 }
 
-func (e *missingParameterError) Error() string {
+func (e *MissingParameterError) Error() string {
 	return "Missing parameter: " + e.Param
 }
 
 func NewMissingParameterError(param string) error {
-	return &missingParameterError{
+	return &MissingParameterError{
 		Param: param,
 	}
 }
 
-type notFoundError struct {
+type NotFoundError struct {
 	Msg string
 }
 
-func (e *notFoundError) Error() string {
+func (e *NotFoundError) Error() string {
 	return e.Msg
 }
 
 func NewNotFoundError(msg string) error {
-	return &notFoundError{
+	return &NotFoundError{
+		Msg: msg,
+	}
+}
+
+type ResourceExhaustedError struct {
+	Msg string
+}
+
+func (e *ResourceExhaustedError) Error() string {
+	return e.Msg
+}
+
+func NewResourceExhaustedError(msg string) error {
+	return &ResourceExhaustedError{
 		Msg: msg,
 	}
 }

@@ -26,16 +26,41 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 	}
 
 	return &entities.Character{
-		ID:        data.ID,
-		Name:      data.Name,
-		OwnerID:   data.OwnerID,
-		Race:      race,
-		Class:     class,
-		Attribues: attributDataToAttributes(data.Attributes),
-		Rolls:     rollDatasToRollResults(data.Rolls),
+		ID:            data.ID,
+		Name:          data.Name,
+		OwnerID:       data.OwnerID,
+		Race:          race,
+		Class:         class,
+		Attribues:     attributDataToAttributes(data.Attributes),
+		Rolls:         rollDatasToRollResults(data.Rolls),
+		Proficiencies: datasToProficiencies(data.Proficiencies),
 	}, nil
 }
 
+func datasToProficiencies(data []*character.Proficiency) []*entities.Proficiency {
+	if data == nil {
+		return nil
+	}
+
+	proficiencies := make([]*entities.Proficiency, 0, len(data))
+	for _, d := range data {
+		proficiencies = append(proficiencies, dataToProficiency(d))
+	}
+
+	return proficiencies
+
+}
+
+func dataToProficiency(data *character.Proficiency) *entities.Proficiency {
+	if data == nil {
+		return nil
+	}
+
+	return &entities.Proficiency{
+		Name: data.Name,
+		Key:  data.Key,
+	}
+}
 func attributDataToAttributes(data *character.AttributeData) map[entities.Attribute]*entities.AbilityScore {
 	if data == nil {
 		data = &character.AttributeData{}
@@ -72,4 +97,57 @@ func rollDatasToRollResults(data []*character.RollData) []*dice.RollResult {
 	}
 
 	return results
+}
+
+func characterToData(input *entities.Character) *character.Data {
+	if input == nil {
+		return nil
+	}
+
+	return &character.Data{
+		ID:         input.ID,
+		Name:       input.Name,
+		OwnerID:    input.OwnerID,
+		RaceKey:    input.Race.Key,
+		ClassKey:   input.Class.Key,
+		Attributes: attributesToAttributeData(input.Attribues),
+		Rolls:      rollResultsToRollDatas(input.Rolls),
+	}
+}
+
+func rollResultsToRollDatas(input []*dice.RollResult) []*character.RollData {
+	datas := make([]*character.RollData, len(input))
+	for i, r := range input {
+		datas[i] = rollResultToRollData(r)
+	}
+
+	return datas
+}
+func rollResultToRollData(input *dice.RollResult) *character.RollData {
+	if input == nil {
+		return nil
+	}
+
+	return &character.RollData{
+		Used:    input.Used,
+		Total:   input.Total,
+		Highest: input.Highest,
+		Lowest:  input.Lowest,
+		Rolls:   input.Rolls,
+	}
+}
+
+func attributesToAttributeData(input map[entities.Attribute]*entities.AbilityScore) *character.AttributeData {
+	if input == nil {
+		return nil
+	}
+
+	return &character.AttributeData{
+		Str: input[entities.AttributeStrength].Score,
+		Dex: input[entities.AttributeDexterity].Score,
+		Con: input[entities.AttributeConstitution].Score,
+		Int: input[entities.AttributeIntelligence].Score,
+		Wis: input[entities.AttributeWisdom].Score,
+		Cha: input[entities.AttributeCharisma].Score,
+	}
 }

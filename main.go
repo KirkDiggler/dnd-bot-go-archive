@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_creation"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
@@ -78,10 +80,18 @@ func main() {
 		panic(err)
 	}
 
+	choiceRepo, err := choice.New(&choice.Config{
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	charManager, err := characters.New(&characters.Config{
 		Client:        dnd5eClient,
 		CharacterRepo: charRepo,
 		StateRepo:     stateRepo,
+		ChoiceRepo:    choiceRepo,
 	})
 	if err != nil {
 		panic(err)

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 
@@ -123,6 +124,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		case chaKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
 			c.handleAttributeSelect(s, i, "cha", selectSlice)
+		case selectProficiencyAction:
+			c.handleProficiencySelect(s, i)
 		}
 	}
 }
@@ -194,7 +197,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 
 	var response *discordgo.InteractionResponse
 	if done {
-		c.handleProficincyStep(s, i)
+		c.handleProficiencyStep(s, i)
 		return
 	} else {
 		response = &discordgo.InteractionResponse{
@@ -361,7 +364,6 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 
 // Selecting a character
 func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("handleRandomStart called")
 	choices, err := c.startNewChoices(4)
 	if err != nil {
 		log.Println(err)
@@ -459,29 +461,97 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	c.handleRollCharacter(s, i)
 }
 
+// Go through choices, searching the active path and return the first unset options
+func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choice, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+	switch input.Status {
+	case entities.ChoiceStatusUnset:
+		return input, nil
+	case entities.ChoiceStatusActive:
+		for _, option := range input.Options {
+			if option.GetOptionType() == entities.OptionTypeChoice {
+				optionChoice := option.(*entities.Choice)
+				if optionChoice.Status == entities.ChoiceStatusInactive {
+					continue
+				}
+
+				return c.getNextChoiceOption(optionChoice)
+			}
+
+			return input, nil
+		}
+	default:
+		return nil, dnderr.NewResourceExhaustedError("no active choice")
+	}
+	return nil, dnderr.NewResourceExhaustedError("no active choice")
+}
+
 // Selecting proficiency options
-func (c *Character) generateProficiencyChoices(char *entities.Character) (string, []discordgo.MessageComponent, error) {
+func (c *Character) generateProficiencyChoices(char *entities.Character, choices []*entities.Choice) (string, []discordgo.MessageComponent, error) {
 	if char.Class == nil {
 		log.Println("Class is nil")
 		return "", nil, errors.New("class is nil")
 	}
 
-	choices := char.Class.ProficiencyChoices
 	if len(choices) == 0 {
 		log.Println("No proficiency choices")
 		return "", nil, errors.New("no proficiency choices")
 	}
 
-	selectedChoice := choices[0]
+	var selectedChoice *entities.Choice
+	for _, choice := range choices {
+		if len(choice.Options) == 0 {
+			log.Println("No proficiency choices")
+			return "", nil, errors.New("no proficiency choices")
+		}
+
+		var SelectErr error
+		selectedChoice, SelectErr = c.getNextChoiceOption(choice)
+		if SelectErr != nil {
+			var exhaustedErr *dnderr.ResourceExhaustedError
+			if errors.As(SelectErr, &exhaustedErr) {
+				continue
+			}
+
+			log.Println(SelectErr)
+			return "", nil, SelectErr
+		}
+
+		selectedChoice.Status = entities.ChoiceStatusActive
+
+		break
+	}
+
+	err := c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
+	if err != nil {
+		log.Println(err)
+		return "", nil, err
+	}
+
+	if selectedChoice == nil {
+		log.Println("No proficiency choices")
+		return "", nil, dnderr.NewResourceExhaustedError("no proficiency choices")
+	}
 
 	msg := fmt.Sprintf("Select %d starting proficiencies:", selectedChoice.Count)
 
-	options := make([]discordgo.SelectMenuOption, len(selectedChoice.From))
-	for idx, choice := range selectedChoice.From {
-		options[idx] = discordgo.SelectMenuOption{
-			Label: choice.Name,
-			Value: fmt.Sprintf("choice:%s", choice.Key),
+	options := make([]discordgo.SelectMenuOption, len(selectedChoice.Options))
+
+	for idx, choice := range selectedChoice.Options {
+		if choice.GetOptionType() == entities.OptionTypeChoice {
+			options[idx] = discordgo.SelectMenuOption{
+				Label: choice.GetName(),
+				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
+			}
+		} else {
+			options[idx] = discordgo.SelectMenuOption{
+				Label: choice.GetName(),
+				Value: fmt.Sprintf("%s:%s", choice.GetOptionType(), choice.GetKey()),
+			}
 		}
+
 	}
 
 	components := []discordgo.MessageComponent{
@@ -496,14 +566,161 @@ func (c *Character) generateProficiencyChoices(char *entities.Character) (string
 	return msg, components, nil
 }
 
-func (c *Character) handleProficincyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepProficiency,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
 	}
 
-	msg, components, err := c.generateProficiencyChoices(char)
+	choices, err := c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	var done bool
+
+	for _, choice := range choices {
+		if choice.Status == entities.ChoiceStatusSelected {
+			continue
+		}
+
+		if choice.Status == entities.ChoiceStatusActive {
+			selectedChoiceIndex := -1
+
+			// here is where I would reload the options for a given choice option
+			for _, value := range i.MessageComponentData().Values {
+				parts := strings.Split(value, ":")
+				if parts[0] == string(entities.OptionTypeChoice) {
+					// if we have a choice, we will check which was choses, set that to active and pass that choice back in
+					// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
+					selectedChoiceIndex, err = strconv.Atoi(parts[2])
+					if err != nil {
+						log.Println(err)
+						return // TODO handle error
+					}
+				} else {
+					char.AddProficiency(&entities.Proficiency{
+						Key: parts[1],
+					})
+				}
+			}
+			choice.Status = entities.ChoiceStatusSelected
+
+			// gross, but I need to get the last choice to set other options inactive
+			if selectedChoiceIndex >= 0 {
+				choice.Status = entities.ChoiceStatusActive
+				for idx, option := range choice.Options {
+					if option.GetOptionType() == entities.OptionTypeChoice {
+						choiceOption := option.(*entities.Choice)
+						if idx == selectedChoiceIndex {
+							log.Println("choice: ", choiceOption.GetName(), " active")
+							choiceOption.Status = entities.ChoiceStatusActive
+						} else {
+							log.Println("choice: ", choiceOption.GetName(), " inactive")
+							choiceOption.Status = entities.ChoiceStatusInactive
+						}
+					}
+				}
+			}
+
+			break
+		}
+
+		done = true
+	}
+
+	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	_, err = c.charManager.Put(context.Background(), char)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	oldInteraction := &discordgo.Interaction{
+		AppID: i.AppID,
+		Token: state.LastToken,
+	}
+	err = s.InteractionResponseDelete(oldInteraction)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	if done {
+		response := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
+				Content: "Proficiencies selected",
+			},
+		}
+
+		err = s.InteractionRespond(i.Interaction, response)
+		if err != nil {
+			log.Println(err)
+			return // TODO handle error
+		}
+	} else {
+		c.handleProficiencyStep(s, i)
+	}
+}
+
+func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepProficiency,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	var choices []*entities.Choice
+
+	if state.Step == entities.CreateStepRoll {
+		choices = char.Class.ProficiencyChoices
+		if char.Race != nil {
+			if char.Race.StartingProficiencyOptions != nil {
+				choices = append(choices, char.Race.StartingProficiencyOptions)
+			}
+		}
+	} else {
+		var choicesErr error
+		choices, choicesErr = c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)
+		if choicesErr != nil {
+			var notFoundErr *dnderr.NotFoundError
+			if !errors.Is(choicesErr, notFoundErr) {
+				log.Println(choicesErr)
+				return // TODO handle error
+			}
+		}
+	}
+
+	msg, components, err := c.generateProficiencyChoices(char, choices)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
@@ -525,7 +742,6 @@ func (c *Character) handleProficincyStep(s *discordgo.Session, i *discordgo.Inte
 	if err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 // Gets the current state for returning before setting the input state
@@ -589,11 +805,27 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	log.Println("Starting new choices")
 	choices := make([]*charChoice, number)
 
-	for idx := 0; idx < 4; idx++ {
-		choices[idx] = &charChoice{
-			Race:  races[rand.Intn(len(races))],
-			Class: classes[rand.Intn(len(classes))],
+	var monk *entities.Class
+	for _, class := range classes {
+		if class.Key == "monk" {
+			monk = class
+			break
 		}
+	}
+	for idx := 0; idx < number-1; idx++ {
+		rand.Seed(time.Now().UnixNano())
+		class := classes[rand.Intn(len(classes))]
+		time.Sleep(1 * time.Nanosecond)
+		rand.Seed(time.Now().UnixNano())
+		race := races[rand.Intn(len(races))]
+		choices[idx] = &charChoice{
+			Race:  race,
+			Class: class,
+		}
+	}
+	choices[number-1] = &charChoice{
+		Race:  races[rand.Intn(len(races))],
+		Class: monk,
 	}
 
 	return choices, nil

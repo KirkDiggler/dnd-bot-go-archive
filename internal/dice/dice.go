@@ -2,6 +2,7 @@ package dice
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -46,6 +47,7 @@ func Roll(count, size int) (*RollResult, error) {
 		out[i] = roll
 	}
 
+	log.Println("Rolling", count, "d", size, ":", out, "total:", total, "min:", min, "max:", max)
 	return &RollResult{
 		Total:   total,
 		Highest: max,

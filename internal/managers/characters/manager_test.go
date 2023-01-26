@@ -29,6 +29,7 @@ type managerSuite struct {
 	race          *entities.Race
 	class         *entities.Class
 	character     *entities.Character
+	characterData *character.Data
 }
 
 func (s *managerSuite) SetupTest() {
@@ -61,6 +62,7 @@ func (s *managerSuite) SetupTest() {
 		},
 		Rolls: make([]*dice.RollResult, 0),
 	}
+	s.characterData = characterToData(s.character)
 	s.fixture = &manager{
 		charRepo:  s.mockRepo,
 		client:    s.mockClient,
@@ -140,8 +142,8 @@ func (s *managerSuite) TestGetStateRepoErrors() {
 }
 
 func (s *managerSuite) TestCreate() {
-	s.mockRepo.On("Put", s.ctx, s.character.ToData()).Return(
-		s.character.ToData(), nil)
+	s.mockRepo.On("Put", s.ctx, s.character).Return(
+		s.character, nil)
 
 	char, err := s.fixture.Put(s.ctx, s.character)
 	s.NoError(err)
@@ -183,7 +185,7 @@ func (s *managerSuite) TestCreateMissingCharacterClass() {
 }
 
 func (s *managerSuite) TestCreateRepoErrors() {
-	s.mockRepo.On("Put", s.ctx, s.character.ToData()).Return(
+	s.mockRepo.On("Put", s.ctx, s.character).Return(
 		nil, errors.New("repo error"))
 
 	_, err := s.fixture.Put(s.ctx, s.character)
@@ -197,7 +199,7 @@ func (s *managerSuite) TestGet() {
 	s.mockClient.On("GetClass", s.class.Key).Return(
 		s.class, nil)
 
-	s.mockRepo.On("Get", s.ctx, s.id).Return(s.character.ToData(), nil)
+	s.mockRepo.On("Get", s.ctx, s.id).Return(s.characterData, nil)
 
 	char, err := s.fixture.Get(s.ctx, s.id)
 	s.NoError(err)

@@ -124,9 +124,9 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: social!", i.Member.User.Username),
 				}
 
-				result := grabBag[rand.Intn(len(grabBag)-1)]
+				result := grabBag[rand.Intn(len(grabBag))]
 
-				log.Printf("%s used ronnied and got %s", i.Member.User.Username, result)
+				log.Println(result)
 
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,

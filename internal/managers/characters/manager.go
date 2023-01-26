@@ -3,6 +3,8 @@ package characters
 import (
 	"context"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_creation"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
@@ -12,14 +14,16 @@ import (
 )
 
 type manager struct {
-	charRepo  character.Repository
-	stateRepo character_creation.Repository
-	client    dnd5e.Client
+	charRepo   character.Repository
+	stateRepo  character_creation.Repository
+	choiceRepo choice.Repository
+	client     dnd5e.Client
 }
 
 type Config struct {
 	CharacterRepo character.Repository
 	StateRepo     character_creation.Repository
+	ChoiceRepo    choice.Repository
 	Client        dnd5e.Client
 }
 
@@ -40,11 +44,60 @@ func New(cfg *Config) (Manager, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.StateRepo")
 	}
 
+	if cfg.ChoiceRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.ChoiceRepo")
+	}
+
 	return &manager{
-		charRepo:  cfg.CharacterRepo,
-		stateRepo: cfg.StateRepo,
-		client:    cfg.Client,
+		charRepo:   cfg.CharacterRepo,
+		stateRepo:  cfg.StateRepo,
+		choiceRepo: cfg.ChoiceRepo,
+		client:     cfg.Client,
 	}, nil
+}
+
+func (m *manager) SaveChoices(ctx context.Context, characterID string, choiceType entities.ChoiceType, choices []*entities.Choice) error {
+	if characterID == "" {
+		return dnderr.NewMissingParameterError("characterID")
+	}
+
+	if choiceType == "" {
+		return dnderr.NewMissingParameterError("choiceType")
+	}
+
+	if choices == nil {
+		return dnderr.NewMissingParameterError("choices")
+	}
+
+	if len(choices) == 0 {
+		return dnderr.NewMissingParameterError("choices")
+	}
+
+	return m.choiceRepo.Put(ctx, &choice.PutInput{
+		CharacterID: characterID,
+		Type:        choiceType,
+		Choices:     choices,
+	})
+}
+
+func (m *manager) GetChoices(ctx context.Context, characterID string, choiceType entities.ChoiceType) ([]*entities.Choice, error) {
+	if characterID == "" {
+		return nil, dnderr.NewMissingParameterError("characterID")
+	}
+
+	if choiceType == "" {
+		return nil, dnderr.NewMissingParameterError("choiceType")
+	}
+
+	data, err := m.choiceRepo.Get(ctx, &choice.GetInput{
+		CharacterID: characterID,
+		Type:        choiceType,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return data.Choices, nil
 }
 
 func (m *manager) Put(ctx context.Context, character *entities.Character) (*entities.Character, error) {
@@ -68,7 +121,7 @@ func (m *manager) Put(ctx context.Context, character *entities.Character) (*enti
 		return nil, dnderr.NewMissingParameterError("character.Class")
 	}
 
-	data, err := m.charRepo.Put(ctx, character.ToData())
+	data, err := m.charRepo.Put(ctx, character)
 	if err != nil {
 		return nil, err
 	}
