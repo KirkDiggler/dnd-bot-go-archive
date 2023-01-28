@@ -469,7 +469,6 @@ func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choic
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
-	log.Println("getting next choie option", input.Name)
 
 	switch input.Status {
 	case entities.ChoiceStatusUnset:
