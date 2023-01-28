@@ -2,6 +2,7 @@ package dice
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -75,4 +76,8 @@ func RollString(diceString string) (*RollResult, error) {
 	}
 
 	return Roll(count, size)
+}
+
+func (r *RollResult) Display() string {
+	return fmt.Sprintf("*%d* : %v  ", r.Total-r.Lowest, r.Rolls)
 }

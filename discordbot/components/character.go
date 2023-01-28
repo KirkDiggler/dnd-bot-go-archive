@@ -77,6 +77,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "load",
 				Description: "Load your character",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "display",
+				Description: "Display your character",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -92,6 +96,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleRandomStart(s, i)
 			case "load":
 				c.handleLoadCharacter(s, i)
+			case "display":
+				c.handleDisplayCharacter(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
@@ -487,8 +493,6 @@ func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choic
 
 			return input, nil
 		}
-	default:
-		return nil, dnderr.NewResourceExhaustedError("no active choice")
 	}
 	return nil, dnderr.NewResourceExhaustedError("no active choice")
 }
@@ -501,15 +505,15 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 	}
 
 	if len(choices) == 0 {
-		log.Println("No proficiency choices")
-		return "", nil, errors.New("no proficiency choices")
+		log.Println("len(choices) == 0 ")
+		return "", nil, dnderr.NewResourceExhaustedError("no proficiency choices")
 	}
 
 	var selectedChoice *entities.Choice
 	for _, choice := range choices {
 		if len(choice.Options) == 0 {
-			log.Println("No proficiency choices")
-			return "", nil, errors.New("no proficiency choices")
+			log.Println("len(choice.Options) == 0")
+			return "", nil, dnderr.NewResourceExhaustedError("no proficiency choices")
 		}
 
 		var SelectErr error
@@ -536,7 +540,7 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 	}
 
 	if selectedChoice == nil {
-		log.Println("No proficiency choices")
+		log.Println("No proficiency choices exhausted")
 		return "", nil, dnderr.NewResourceExhaustedError("no proficiency choices")
 	}
 
@@ -594,7 +598,7 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 		return // TODO handle error
 	}
 
-	var done bool
+	var done = true
 
 	for _, choice := range choices {
 		if choice.Status == entities.ChoiceStatusSelected {
@@ -640,10 +644,9 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 				}
 			}
 
+			done = false
 			break
 		}
-
-		done = true
 	}
 
 	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
@@ -668,6 +671,7 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 		return // TODO handle error
 	}
 
+	log.Println("proficiency done: ", done)
 	if done {
 		c.handleEquipmentStep(s, i)
 	} else {
@@ -705,20 +709,17 @@ func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.Int
 		var choicesErr error
 		proficiencyChoices, choicesErr = c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency)
 		if choicesErr != nil {
-			var notFoundErr *dnderr.NotFoundError
-			if !errors.Is(choicesErr, notFoundErr) {
-				log.Println("loading equipment options", choicesErr)
-				c.handleEquipmentStep(s, i)
-			}
+			log.Println(choicesErr)
+
+			return // TODO handle error
 		}
 	}
 
 	msg, components, err := c.generateProficiencyChoices(char, proficiencyChoices)
 	if err != nil {
 		log.Println(err)
-		var notFoundErr *dnderr.NotFoundError
-		if !errors.Is(err, notFoundErr) {
-			log.Println("loading equipment options", err)
+		var exhaustedErr *dnderr.ResourceExhaustedError
+		if errors.As(err, &exhaustedErr) {
 			c.handleEquipmentStep(s, i)
 		}
 		return // TODO handle error
@@ -751,23 +752,19 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 
 	if len(choices) == 0 {
 		log.Println("No equipment choices")
-		return "", nil, errors.New("no equipment choices")
+		return "", nil, errors.New("equipment len(choices) == 0")
 	}
 
 	var selectedChoice *entities.Choice
 	for _, choice := range choices {
 		if len(choice.Options) == 0 {
-			log.Println("No equipment choices")
+			log.Println("equipment len(choice.Options) == 0")
 			return "", nil, errors.New("no equipment choices")
 		}
 
 		var SelectErr error
 		selectedChoice, SelectErr = c.getNextChoiceOption(choice)
 		if SelectErr != nil {
-			var exhaustedErr *dnderr.ResourceExhaustedError
-			if errors.As(SelectErr, &exhaustedErr) {
-				continue
-			}
 
 			log.Println(SelectErr)
 			return "", nil, SelectErr
@@ -843,7 +840,7 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 		return // TODO handle error
 	}
 
-	var done bool
+	var done = true
 
 	for _, choice := range choices {
 		if choice.Status == entities.ChoiceStatusSelected {
@@ -851,6 +848,7 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 		}
 
 		if choice.Status == entities.ChoiceStatusActive {
+			done = false
 			selectedChoiceIndex := -1
 
 			// here is where I would reload the options for a given choice option
@@ -885,6 +883,8 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 
 			break
 		}
+
+		log.Println("done choosing equipment")
 
 		done = true
 	}
@@ -956,24 +956,39 @@ func (c *Character) handleEquipmentStep(s *discordgo.Session, i *discordgo.Inter
 		var choicesErr error
 		if choicesErr != nil {
 			var notFoundErr *dnderr.NotFoundError
-			if !errors.Is(choicesErr, notFoundErr) {
+			if !errors.As(choicesErr, &notFoundErr) {
 				log.Println(choicesErr)
 				return // TODO handle error
 			}
 		}
 		startingEquipementChoices, choicesErr = c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeEquipment)
 		if choicesErr != nil {
-			var notFoundErr *dnderr.NotFoundError
-			if !errors.Is(choicesErr, notFoundErr) {
-				log.Println(choicesErr)
-				return // TODO handle error
-			}
+			log.Println(choicesErr)
+			return // TODO handle error
+
 		}
 	}
 
 	msg, components, err := c.generateStartingEquipmentChoices(char, startingEquipementChoices)
 	if err != nil {
 		log.Println(err)
+		var exhaustedErr *dnderr.ResourceExhaustedError
+		if errors.As(err, &exhaustedErr) {
+			response := &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   discordgo.MessageFlagsEphemeral,
+					Content: "equipment selected",
+				},
+			}
+
+			err = s.InteractionRespond(i.Interaction, response)
+			if err != nil {
+				log.Println(err)
+				return // TODO handle error
+			}
+		}
+
 		return // TODO handle error
 	}
 
@@ -1013,7 +1028,27 @@ func (c *Character) getAndUpdateState(input *entities.CharacterCreation) (*entit
 
 	return existing, nil
 }
+func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
 
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: char.Display(),
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+}
 func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
