@@ -40,6 +40,8 @@ type Option interface {
 	GetOptionType() OptionType
 	GetName() string
 	GetKey() string
+	GetStatus() ChoiceStatus
+	SetStatus(ChoiceStatus)
 }
 
 type CountedReferenceOption struct {
@@ -54,6 +56,14 @@ func (o *CountedReferenceOption) GetOptionType() OptionType {
 
 func (o *CountedReferenceOption) GetName() string {
 	return o.Reference.Name
+}
+
+func (o *CountedReferenceOption) GetStatus() ChoiceStatus {
+	return o.Status
+}
+
+func (o *CountedReferenceOption) SetStatus(status ChoiceStatus) {
+	o.Status = status
 }
 
 func (o *CountedReferenceOption) GetKey() string {
@@ -77,6 +87,14 @@ func (o *ReferenceOption) GetKey() string {
 	return o.Reference.Key
 }
 
+func (o *ReferenceOption) GetStatus() ChoiceStatus {
+	return o.Status
+}
+
+func (o *ReferenceOption) SetStatus(status ChoiceStatus) {
+	o.Status = status
+}
+
 func (o *Choice) GetOptionType() OptionType {
 	return OptionTypeChoice
 }
@@ -87,6 +105,14 @@ func (o *Choice) GetName() string {
 
 func (o *Choice) GetKey() string {
 	return o.Key
+}
+
+func (o *Choice) GetStatus() ChoiceStatus {
+	return o.Status
+}
+
+func (o *Choice) SetStatus(status ChoiceStatus) {
+	o.Status = status
 }
 
 type MultipleOption struct {
@@ -104,4 +130,12 @@ func (o *MultipleOption) GetName() string {
 
 func (o *MultipleOption) GetKey() string {
 	return ""
+}
+
+func (o *MultipleOption) GetStatus() ChoiceStatus {
+	return o.Status
+}
+
+func (o *MultipleOption) SetStatus(status ChoiceStatus) {
+	o.Status = status
 }
