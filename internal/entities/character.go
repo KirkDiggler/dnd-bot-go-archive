@@ -24,33 +24,37 @@ func (c *Character) AddAttribute(attr Attribute, score int) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
 	}
-
+	bonus := 0
+	if _, ok := c.Attribues[attr]; ok {
+		bonus = c.Attribues[attr].Bonus
+	}
 	abilityScore := &AbilityScore{
 		Score: score,
+		Bonus: bonus,
 	}
 	switch {
 	case score == 1:
-		abilityScore.Bonus = -5
+		abilityScore.Bonus += -5
 	case score < 4 && score > 1:
-		abilityScore.Bonus = -4
+		abilityScore.Bonus += -4
 	case score < 6 && score > 3:
-		abilityScore.Bonus = -3
+		abilityScore.Bonus += -3
 	case score < 8 && score > 5:
-		abilityScore.Bonus = -2
+		abilityScore.Bonus += -2
 	case score < 10 && score >= 8:
-		abilityScore.Bonus = -1
+		abilityScore.Bonus += -1
 	case score < 12 && score > 9:
-		abilityScore.Bonus = 0
+		abilityScore.Bonus += 0
 	case score < 14 && score > 11:
-		abilityScore.Bonus = 1
+		abilityScore.Bonus += 1
 	case score < 16 && score > 13:
-		abilityScore.Bonus = 2
+		abilityScore.Bonus += 2
 	case score < 18 && score > 15:
-		abilityScore.Bonus = 3
+		abilityScore.Bonus += 3
 	case score < 20 && score > 17:
-		abilityScore.Bonus = 4
+		abilityScore.Bonus += 4
 	case score == 20:
-		abilityScore.Bonus = 5
+		abilityScore.Bonus += 5
 	}
 
 	c.Attribues[attr] = abilityScore
@@ -58,6 +62,10 @@ func (c *Character) AddAttribute(attr Attribute, score int) {
 func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
+	}
+
+	if _, ok := c.Attribues[ab.Attribute]; !ok {
+		c.Attribues[ab.Attribute] = &AbilityScore{}
 	}
 
 	c.Attribues[ab.Attribute] = c.Attribues[ab.Attribute].AddBonus(ab.Bonus)
