@@ -41,3 +41,17 @@ func NewResourceExhaustedError(msg string) error {
 		Msg: msg,
 	}
 }
+
+type InvalidEntityError struct {
+	Msg string
+}
+
+func (e *InvalidEntityError) Error() string {
+	return e.Msg
+}
+
+func NewInvalidEntityError(msg string) error {
+	return &InvalidEntityError{
+		Msg: msg,
+	}
+}

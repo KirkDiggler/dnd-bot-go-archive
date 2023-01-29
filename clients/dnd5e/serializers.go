@@ -43,6 +43,67 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 		Key:                        input.Key,
 		Name:                       input.Name,
 		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
+		StartingProficiencies:      apiProficienciesToProficiencies(input.StartingProficiencies),
+		AbilityBonuses:             apiAbilityBonusesToAbilityBonuses(input.AbilityBonuses),
+	}
+}
+
+func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*entities.AbilityBonus {
+	output := make([]*entities.AbilityBonus, len(input))
+	for i, apiAbilityBonus := range input {
+		output[i] = apiAbilityBonusToAbilityBonus(apiAbilityBonus)
+	}
+
+	return output
+}
+
+func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *entities.AbilityBonus {
+	if input == nil {
+		return nil
+	}
+	if input.AbilityScore == nil {
+		return nil
+	}
+
+	return &entities.AbilityBonus{
+		Attribute: referenceItemKeyToAttribute(input.AbilityScore.Key),
+		Bonus:     input.Bonus,
+	}
+}
+
+func referenceItemKeyToAttribute(input string) entities.Attribute {
+	switch input {
+	case "str":
+		return entities.AttributeStrength
+	case "dex":
+		return entities.AttributeDexterity
+	case "con":
+		return entities.AttributeConstitution
+	case "int":
+		return entities.AttributeIntelligence
+	case "wis":
+		return entities.AttributeWisdom
+	case "cha":
+		return entities.AttributeCharisma
+	default:
+		log.Fatalf("Unknown attribute %s", input)
+		return entities.AttributeNone
+	}
+}
+
+func apiProficienciesToProficiencies(input []*apiEntities.ReferenceItem) []*entities.Proficiency {
+	output := make([]*entities.Proficiency, len(input))
+	for i, apiProficiency := range input {
+		output[i] = apiProficiencyToProficiency(apiProficiency)
+	}
+
+	return output
+}
+
+func apiProficiencyToProficiency(input *apiEntities.ReferenceItem) *entities.Proficiency {
+	return &entities.Proficiency{
+		Key:  input.Key,
+		Name: input.Name,
 	}
 }
 
@@ -52,6 +113,7 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 		Name:                     input.Name,
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
+		Proficiencies:            apiProficienciesToProficiencies(input.Proficiencies),
 	}
 }
 

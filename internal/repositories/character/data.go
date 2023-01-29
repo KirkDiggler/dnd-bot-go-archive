@@ -20,14 +20,18 @@ type RollData struct {
 }
 
 type AttributeData struct {
-	Str int `json:"str"`
-	Dex int `json:"dex"`
-	Con int `json:"con"`
-	Int int `json:"int"`
-	Wis int `json:"wis"`
-	Cha int `json:"cha"`
+	Str *AbilityScoreData `json:"str"`
+	Dex *AbilityScoreData `json:"dex"`
+	Con *AbilityScoreData `json:"con"`
+	Int *AbilityScoreData `json:"int"`
+	Wis *AbilityScoreData `json:"wis"`
+	Cha *AbilityScoreData `json:"cha"`
 }
 
+type AbilityScoreData struct {
+	Score int `json:"score"`
+	Bonus int `json:"bonus"`
+}
 type Proficiency struct {
 	Key  string `json:"key"`
 	Name string `json:"name,omitempty"`

@@ -78,6 +78,7 @@ func RollString(diceString string) (*RollResult, error) {
 	return Roll(count, size)
 }
 
-func (r *RollResult) Display() string {
-	return fmt.Sprintf("*%d* : %v  ", r.Total-r.Lowest, r.Rolls)
+func (r *RollResult) String() string {
+	compact := strings.Replace(fmt.Sprintf("%v", r.Rolls), " ", "", -1)
+	return fmt.Sprintf("**%d** : %s", r.Total-r.Lowest, compact)
 }

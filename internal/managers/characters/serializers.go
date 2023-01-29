@@ -67,15 +67,25 @@ func attributDataToAttributes(data *character.AttributeData) map[entities.Attrib
 	}
 
 	return map[entities.Attribute]*entities.AbilityScore{
-		entities.AttributeStrength:     {Score: data.Str},
-		entities.AttributeDexterity:    {Score: data.Dex},
-		entities.AttributeConstitution: {Score: data.Con},
-		entities.AttributeIntelligence: {Score: data.Int},
-		entities.AttributeWisdom:       {Score: data.Wis},
-		entities.AttributeCharisma:     {Score: data.Cha},
+		entities.AttributeStrength:     abilityScoreDataToAbilityScore(data.Str),
+		entities.AttributeDexterity:    abilityScoreDataToAbilityScore(data.Dex),
+		entities.AttributeConstitution: abilityScoreDataToAbilityScore(data.Con),
+		entities.AttributeIntelligence: abilityScoreDataToAbilityScore(data.Int),
+		entities.AttributeWisdom:       abilityScoreDataToAbilityScore(data.Wis),
+		entities.AttributeCharisma:     abilityScoreDataToAbilityScore(data.Cha),
 	}
 }
 
+func abilityScoreDataToAbilityScore(data *character.AbilityScoreData) *entities.AbilityScore {
+	if data == nil {
+		return nil
+	}
+
+	return &entities.AbilityScore{
+		Score: data.Score,
+		Bonus: data.Bonus,
+	}
+}
 func rollDataToRollResult(data *character.RollData) *dice.RollResult {
 	if data == nil {
 		return nil
@@ -137,17 +147,27 @@ func rollResultToRollData(input *dice.RollResult) *character.RollData {
 	}
 }
 
+func abilityScoreToData(input *entities.AbilityScore) *character.AbilityScoreData {
+	if input == nil {
+		return nil
+	}
+
+	return &character.AbilityScoreData{
+		Score: input.Score,
+		Bonus: input.Bonus,
+	}
+}
 func attributesToAttributeData(input map[entities.Attribute]*entities.AbilityScore) *character.AttributeData {
 	if input == nil {
 		return nil
 	}
 
 	return &character.AttributeData{
-		Str: input[entities.AttributeStrength].Score,
-		Dex: input[entities.AttributeDexterity].Score,
-		Con: input[entities.AttributeConstitution].Score,
-		Int: input[entities.AttributeIntelligence].Score,
-		Wis: input[entities.AttributeWisdom].Score,
-		Cha: input[entities.AttributeCharisma].Score,
+		Str: abilityScoreToData(input[entities.AttributeStrength]),
+		Dex: abilityScoreToData(input[entities.AttributeDexterity]),
+		Con: abilityScoreToData(input[entities.AttributeConstitution]),
+		Int: abilityScoreToData(input[entities.AttributeIntelligence]),
+		Wis: abilityScoreToData(input[entities.AttributeWisdom]),
+		Cha: abilityScoreToData(input[entities.AttributeCharisma]),
 	}
 }
