@@ -5,17 +5,23 @@ import "fmt"
 type Attribute string
 
 const (
-	AttributeStrength     Attribute = "str"
-	AttributeDexterity    Attribute = "dex"
-	AttributeConstitution Attribute = "con"
-	AttributeIntelligence Attribute = "int"
-	AttributeWisdom       Attribute = "wis"
-	AttributeCharisma     Attribute = "cha"
+	AttributeNone         Attribute = ""
+	AttributeStrength     Attribute = "Str"
+	AttributeDexterity    Attribute = "Dex"
+	AttributeConstitution Attribute = "Con"
+	AttributeIntelligence Attribute = "Int"
+	AttributeWisdom       Attribute = "Wis"
+	AttributeCharisma     Attribute = "Cha"
 )
 
 type AbilityScore struct {
 	Score int
 	Bonus int
+}
+
+type AbilityBonus struct {
+	Attribute Attribute
+	Bonus     int
 }
 
 func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
@@ -24,6 +30,6 @@ func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
 	return a
 }
 
-func (a *AbilityScore) Display() string {
+func (a *AbilityScore) String() string {
 	return fmt.Sprintf("%d (%+d)", a.Score, a.Bonus)
 }

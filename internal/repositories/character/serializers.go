@@ -42,28 +42,28 @@ func characterToData(input *entities.Character) *Data {
 	}
 
 	data := &AttributeData{
-		Str: 0,
-		Dex: 0,
-		Con: 0,
-		Int: 0,
-		Wis: 0,
-		Cha: 0,
+		Str: &AbilityScoreData{},
+		Dex: &AbilityScoreData{},
+		Con: &AbilityScoreData{},
+		Int: &AbilityScoreData{},
+		Wis: &AbilityScoreData{},
+		Cha: &AbilityScoreData{},
 	}
 
 	for key, attr := range input.Attribues {
 		switch key {
 		case entities.AttributeStrength:
-			data.Str = attr.Score
+			data.Str = abilityScoreToData(attr)
 		case entities.AttributeDexterity:
-			data.Dex = attr.Score
+			data.Dex = abilityScoreToData(attr)
 		case entities.AttributeConstitution:
-			data.Con = attr.Score
+			data.Con = abilityScoreToData(attr)
 		case entities.AttributeIntelligence:
-			data.Int = attr.Score
+			data.Int = abilityScoreToData(attr)
 		case entities.AttributeWisdom:
-			data.Wis = attr.Score
+			data.Wis = abilityScoreToData(attr)
 		case entities.AttributeCharisma:
-			data.Cha = attr.Score
+			data.Cha = abilityScoreToData(attr)
 		}
 	}
 
@@ -78,7 +78,12 @@ func characterToData(input *entities.Character) *Data {
 		Proficiencies: proficienciesToDatas(input.Proficiencies),
 	}
 }
-
+func abilityScoreToData(input *entities.AbilityScore) *AbilityScoreData {
+	return &AbilityScoreData{
+		Score: input.Score,
+		Bonus: input.Bonus,
+	}
+}
 func rollResultToRollData(result *dice.RollResult) *RollData {
 	if result == nil {
 

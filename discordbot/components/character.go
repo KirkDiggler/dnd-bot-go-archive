@@ -101,12 +101,12 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			}
 		}
 	case discordgo.InteractionMessageComponent:
-		strKey := fmt.Sprintf("%s:%s:str", selectAttributeKey, i.Member.User.ID)
-		dexKey := fmt.Sprintf("%s:%s:dex", selectAttributeKey, i.Member.User.ID)
-		conKey := fmt.Sprintf("%s:%s:con", selectAttributeKey, i.Member.User.ID)
-		intKey := fmt.Sprintf("%s:%s:int", selectAttributeKey, i.Member.User.ID)
-		wisKey := fmt.Sprintf("%s:%s:wis", selectAttributeKey, i.Member.User.ID)
-		chaKey := fmt.Sprintf("%s:%s:cha", selectAttributeKey, i.Member.User.ID)
+		strKey := fmt.Sprintf("%s:%s:Str", selectAttributeKey, i.Member.User.ID)
+		dexKey := fmt.Sprintf("%s:%s:Dex", selectAttributeKey, i.Member.User.ID)
+		conKey := fmt.Sprintf("%s:%s:Con", selectAttributeKey, i.Member.User.ID)
+		intKey := fmt.Sprintf("%s:%s:Int", selectAttributeKey, i.Member.User.ID)
+		wisKey := fmt.Sprintf("%s:%s:Wis", selectAttributeKey, i.Member.User.ID)
+		chaKey := fmt.Sprintf("%s:%s:Cha", selectAttributeKey, i.Member.User.ID)
 
 		switch i.MessageComponentData().CustomID {
 		case selectCaracterAction:
@@ -115,22 +115,22 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			c.handleRollCharacter(s, i)
 		case strKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "str", selectSlice)
+			c.handleAttributeSelect(s, i, "Str", selectSlice)
 		case dexKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "dex", selectSlice)
+			c.handleAttributeSelect(s, i, "Dex", selectSlice)
 		case conKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "con", selectSlice)
+			c.handleAttributeSelect(s, i, "Con", selectSlice)
 		case intKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "int", selectSlice)
+			c.handleAttributeSelect(s, i, "Int", selectSlice)
 		case wisKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "wis", selectSlice)
+			c.handleAttributeSelect(s, i, "Wis", selectSlice)
 		case chaKey:
 			selectSlice := strings.Split(i.MessageComponentData().Values[0], ":")
-			c.handleAttributeSelect(s, i, "cha", selectSlice)
+			c.handleAttributeSelect(s, i, "Cha", selectSlice)
 		case selectProficiencyAction:
 			c.handleProficiencySelect(s, i)
 		case selectEquipmentAction:
@@ -153,13 +153,13 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 	}
 
 	if idx >= len(char.Rolls) {
-		log.Printf("index out of rabge. idx: %d, len: %d", idx, len(char.Rolls))
+		log.Printf("index out of range. idx: %d, len: %d", idx, len(char.Rolls))
 		return // TODO: Handle error
 	}
 	// TODO: make set attribut function that returns bool if it was set
 	if !char.Rolls[idx].Used { // We have not used this one
-		char.Attribues[entities.Attribute(attribute)].Score = char.Rolls[idx].Total - char.Rolls[idx].Lowest
-		log.Println("setting ", attribute, " to ", char.Attribues[entities.Attribute(attribute)].Score)
+		char.AddAttribute(entities.Attribute(attribute), char.Rolls[idx].Total-char.Rolls[idx].Lowest)
+		log.Printf("setting %s to %s ", attribute, char.Attribues[entities.Attribute(attribute)])
 		char.Rolls[idx].Used = true
 		// TODO Calculate modifiers
 	}
@@ -229,7 +229,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*dice.RollResult, i *discordgo.InteractionCreate) ([]discordgo.MessageComponent, error) {
 	userID := i.Member.User.ID
 
-	selectionOrder := []string{"str", "dex", "con", "int", "wis", "cha"}
+	selectionOrder := []string{"Str", "Dex", "Con", "Int", "Wis", "Cha"}
 
 	selected := make(map[entities.Attribute]*entities.AbilityScore)
 
@@ -422,6 +422,36 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 
 }
 
+func (c *Character) initializeCharacter(charID string) error {
+	char, err := c.charManager.Get(context.Background(), charID)
+	if err != nil {
+		return err
+	}
+
+	if char.Race == nil {
+		return dnderr.NewInvalidEntityError("Race is nil")
+	}
+
+	if char.Class == nil {
+		return dnderr.NewInvalidEntityError("Class is nil")
+	}
+	// Load the race starting data
+	for _, prof := range char.Race.StartingProficiencies {
+		char.AddProficiency(prof)
+	}
+
+	for _, bonus := range char.Race.AbilityBonuses {
+		char.AddAbilityBonus(bonus)
+	}
+
+	for _, prof := range char.Class.Proficiencies {
+		char.AddProficiency(prof)
+	}
+
+	_, err = c.charManager.Put(context.Background(), char)
+
+	return nil
+}
 func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	selectString := strings.Split(i.MessageComponentData().Values[0], ":")
 	if len(selectString) != 4 {
@@ -432,7 +462,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
-	_, err := c.charManager.Put(context.Background(), &entities.Character{
+	char, err := c.charManager.Put(context.Background(), &entities.Character{
 		OwnerID: i.Member.User.ID,
 		Name:    i.Member.User.Username,
 		Race: &entities.Race{
@@ -442,6 +472,12 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 			Key: class,
 		},
 	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	err = c.initializeCharacter(char.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
@@ -552,12 +588,12 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 		if choice.GetOptionType() == entities.OptionTypeChoice {
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
-				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
+				Value: fmt.Sprintf("%s::%s::%d", choice.GetOptionType(), choice.GetKey(), idx),
 			}
 		} else {
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
-				Value: fmt.Sprintf("%s:%s", choice.GetOptionType(), choice.GetKey()),
+				Value: fmt.Sprintf("%s::%s::%s", choice.GetOptionType(), choice.GetKey(), choice.GetName()),
 			}
 		}
 
@@ -610,7 +646,8 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 
 			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
-				parts := strings.Split(value, ":")
+				parts := strings.Split(value, "::")
+				log.Println(parts)
 				if parts[0] == string(entities.OptionTypeChoice) {
 					// if we have a choice, we will check which was choses, set that to active and pass that choice back in
 					// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
@@ -621,7 +658,8 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 					}
 				} else {
 					char.AddProficiency(&entities.Proficiency{
-						Key: parts[1],
+						Key:  parts[1],
+						Name: parts[2],
 					})
 				}
 			}
@@ -1038,7 +1076,7 @@ func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.In
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: char.Display(),
+			Content: char.String(),
 		},
 	}
 
