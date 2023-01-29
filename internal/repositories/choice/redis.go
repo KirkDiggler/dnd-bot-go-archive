@@ -3,7 +3,6 @@ package choice
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
@@ -62,7 +61,7 @@ func (r *redisRepo) Get(ctx context.Context, input *GetInput) (*GetOutput, error
 		return nil, result.Err()
 	}
 	jsonResult := result.Val()
-	log.Printf("Getting choices for key: %s", getChoiceKey(input.CharacterID, input.Type))
+
 	data := jsonToData(jsonResult)
 	return &GetOutput{
 		CharacterID: data.CharacterID,
@@ -96,7 +95,6 @@ func (r *redisRepo) Put(ctx context.Context, input *PutInput) error {
 	}
 
 	jsonData := dataToJSON(data)
-	log.Printf("Putting choices for key: %s", getChoiceKey(input.CharacterID, input.Type))
 
 	result := r.client.Set(context.Background(), getChoiceKey(input.CharacterID, input.Type), jsonData, 0)
 	if result.Err() != nil {

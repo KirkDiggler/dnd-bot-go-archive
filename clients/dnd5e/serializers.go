@@ -48,9 +48,10 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 
 func apiClassToClass(input *apiEntities.Class) *entities.Class {
 	return &entities.Class{
-		Key:                input.Key,
-		Name:               input.Name,
-		ProficiencyChoices: apiChoicesToChoices(input.ProficiencyChoices),
+		Key:                      input.Key,
+		Name:                     input.Name,
+		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
+		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
 	}
 }
 

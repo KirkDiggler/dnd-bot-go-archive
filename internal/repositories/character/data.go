@@ -32,9 +32,3 @@ type Proficiency struct {
 	Key  string `json:"key"`
 	Name string `json:"name,omitempty"`
 }
-
-type ProficiencyChoice struct {
-	Selected bool `json:"selected"`
-	Count    int  `json:"count"`
-	From     []*Proficiency
-}

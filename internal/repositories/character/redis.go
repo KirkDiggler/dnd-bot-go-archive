@@ -3,7 +3,6 @@ package character
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
@@ -45,7 +44,6 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*Data, error) {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
 
-	log.Println("Getting character with id: ", id)
 	result := r.client.Get(ctx, getCharacterKey(id))
 	if result.Err() != nil {
 		if result.Err() == redis.Nil {
