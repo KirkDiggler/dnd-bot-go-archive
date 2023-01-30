@@ -10,5 +10,6 @@
 # redis database file
 dump.rdb
 
+dnd-bot-go
 # Dependency directories (remove the comment below to include it)
 # vendor/
