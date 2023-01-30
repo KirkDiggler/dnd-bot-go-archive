@@ -43,7 +43,7 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 		Key:                        input.Key,
 		Name:                       input.Name,
 		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
-		StartingProficiencies:      apiProficienciesToProficiencies(input.StartingProficiencies),
+		StartingProficiencies:      apiReferenceItemsToReferenceItems(input.StartingProficiencies),
 		AbilityBonuses:             apiAbilityBonusesToAbilityBonuses(input.AbilityBonuses),
 	}
 }
@@ -91,29 +91,41 @@ func referenceItemKeyToAttribute(input string) entities.Attribute {
 	}
 }
 
-func apiProficienciesToProficiencies(input []*apiEntities.ReferenceItem) []*entities.Proficiency {
-	output := make([]*entities.Proficiency, len(input))
-	for i, apiProficiency := range input {
-		output[i] = apiProficiencyToProficiency(apiProficiency)
-	}
-
-	return output
-}
-
-func apiProficiencyToProficiency(input *apiEntities.ReferenceItem) *entities.Proficiency {
+func apiProficiencyToProficiency(input *apiEntities.Proficiency) *entities.Proficiency {
 	return &entities.Proficiency{
 		Key:  input.Key,
 		Name: input.Name,
+		Type: apiProficiencyTypeToProficiencyType(input.Type),
 	}
 }
 
+func apiProficiencyTypeToProficiencyType(input apiEntities.ProficiencyType) entities.ProficiencyType {
+	switch input {
+	case apiEntities.ProficiencyTypeArmor:
+		return entities.ProficiencyTypeArmor
+	case apiEntities.ProficiencyTypeWeapon:
+		return entities.ProficiencyTypeWeapon
+	case apiEntities.ProficiencyTypeTool:
+		return entities.ProficiencyTypeTool
+	case apiEntities.ProficiencyTypeSavingThrow:
+		return entities.ProficiencyTypeSavingThrow
+	case apiEntities.ProficiencyTypeSkill:
+		return entities.ProficiencyTypeSkill
+	case apiEntities.ProficiencyTypeInstrument:
+		return entities.ProficiencyTypeInstrument
+	default:
+		log.Printf("Unknown proficiency type %s", input)
+		return entities.ProficiencyTypeUnknown
+
+	}
+}
 func apiClassToClass(input *apiEntities.Class) *entities.Class {
 	return &entities.Class{
 		Key:                      input.Key,
 		Name:                     input.Name,
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
+		Proficiencies:            apiReferenceItemsToReferenceItems(input.Proficiencies),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
-		Proficiencies:            apiProficienciesToProficiencies(input.Proficiencies),
 	}
 }
 
@@ -209,10 +221,36 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 	}
 }
 
+func apiReferenceItemsToReferenceItems(input []*apiEntities.ReferenceItem) []*entities.ReferenceItem {
+	output := make([]*entities.ReferenceItem, len(input))
+	for i, apiReferenceItem := range input {
+		output[i] = apiReferenceItemToReferenceItem(apiReferenceItem)
+	}
+
+	return output
+}
 func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *entities.ReferenceItem {
 	return &entities.ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
-		Type: input.Type,
+		Type: typeStringToReferenceType(input.Type),
+	}
+}
+
+func typeStringToReferenceType(input string) entities.ReferenceType {
+	switch input {
+	case "equipment":
+		return entities.ReferenceTypeEquipment
+	case "proficiencies":
+		return entities.ReferenceTypeProficiency
+	case "languages":
+		return entities.ReferenceTypeLanguage
+	case "ability-scores":
+		return entities.ReferenceTypeAbilityScore
+	case "skills":
+		return entities.ReferenceTypeSkill
+	default:
+		log.Println("Unknown reference type: ", input)
+		return entities.ReferenceTypeUnset
 	}
 }

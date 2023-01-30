@@ -3,6 +3,7 @@ package entities
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 )
@@ -16,14 +17,16 @@ type Character struct {
 	Class              *Class
 	Attribues          map[Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
-	Proficiencies      []*Proficiency
+	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
+	mu                 sync.Mutex
 }
 
 func (c *Character) AddAttribute(attr Attribute, score int) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
 	}
+
 	bonus := 0
 	if _, ok := c.Attribues[attr]; ok {
 		bonus = c.Attribues[attr].Bonus
@@ -73,10 +76,15 @@ func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 
 func (c *Character) AddProficiency(p *Proficiency) {
 	if c.Proficiencies == nil {
-		c.Proficiencies = make([]*Proficiency, 0)
+		c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	}
+	c.mu.Lock()
+	if c.Proficiencies[p.Type] == nil {
+		c.Proficiencies[p.Type] = make([]*Proficiency, 0)
 	}
 
-	c.Proficiencies = append(c.Proficiencies, p)
+	c.Proficiencies[p.Type] = append(c.Proficiencies[p.Type], p)
+	c.mu.Unlock()
 }
 
 func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
@@ -106,8 +114,16 @@ func (c *Character) String() string {
 	}
 
 	msg.WriteString("\n**Proficiencies**:\n")
-	for _, prof := range c.Proficiencies {
-		msg.WriteString(fmt.Sprintf("  -  %s\n", prof))
+	for _, key := range ProficiencyTypes {
+		if c.Proficiencies[key] == nil {
+			continue
+		}
+
+		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
+		for _, prof := range c.Proficiencies[key] {
+			msg.WriteString(fmt.Sprintf("    -  %s\n", prof.Name))
+		}
 	}
+
 	return msg.String()
 }

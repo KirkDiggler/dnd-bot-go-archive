@@ -48,3 +48,13 @@ func (m *Mock) GetClass(key string) (*entities.Class, error) {
 
 	return args.Get(0).(*entities.Class), nil
 }
+
+func (m *Mock) GetProficiency(key string) (*entities.Proficiency, error) {
+	args := m.Called(key)
+
+	if args.Error(1) != nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).(*entities.Proficiency), nil
+}

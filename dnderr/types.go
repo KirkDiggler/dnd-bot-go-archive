@@ -55,3 +55,19 @@ func NewInvalidEntityError(msg string) error {
 		Msg: msg,
 	}
 }
+
+type InvalidParameterError struct {
+	Param string
+	Msg   string
+}
+
+func (e *InvalidParameterError) Error() string {
+	return "Invalid parameter: " + e.Param + " - " + e.Msg
+}
+
+func NewInvalidParameterError(param, msg string) error {
+	return &InvalidParameterError{
+		Param: param,
+		Msg:   msg,
+	}
+}

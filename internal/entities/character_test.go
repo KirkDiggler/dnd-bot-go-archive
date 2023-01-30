@@ -170,7 +170,7 @@ func TestCharacter_AddAttribute(t *testing.T) {
 			}
 
 			c.AddAttribute(tt.args.attribute, tt.args.abilityScore.Score)
-
+			_ = c.String()
 			if _, ok := c.Attribues[tt.args.attribute]; !ok {
 				t.Errorf("expected attribute %s to be present", tt.args.attribute)
 			}

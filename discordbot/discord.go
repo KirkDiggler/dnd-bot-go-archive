@@ -29,7 +29,7 @@ type Config struct {
 	Token         string
 	GuildID       string
 	AppID         string
-	Client        dnd5e.Client
+	DnD5EClient   dnd5e.Client
 	PartyRepo     party.Interface
 	CharacterRepo characters.Manager
 }
@@ -39,7 +39,7 @@ func New(cfg *Config) (*bot, error) {
 		return nil, dnderr.NewMissingParameterError("cfg")
 	}
 
-	if cfg.Client == nil {
+	if cfg.DnD5EClient == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.Client")
 	}
 
@@ -77,8 +77,8 @@ func New(cfg *Config) (*bot, error) {
 	}
 
 	characterComponent, err := components.NewCharacter(&components.CharacterConfig{
-		Client:        cfg.Client,
-		CharacterRepo: cfg.CharacterRepo,
+		Client:           cfg.DnD5EClient,
+		CharacterManager: cfg.CharacterRepo,
 	})
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
@@ -59,7 +60,9 @@ func (c *client) GetRace(key string) (*entities.Race, error) {
 		return nil, err
 	}
 
-	return apiRaceToRace(response), nil
+	race := apiRaceToRace(response)
+
+	return race, nil
 }
 
 func (c *client) GetClass(key string) (*entities.Class, error) {
@@ -69,4 +72,26 @@ func (c *client) GetClass(key string) (*entities.Class, error) {
 	}
 
 	return apiClassToClass(response), nil
+}
+
+func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
+	if key == "" {
+		return nil, dnderr.NewMissingParameterError("GetProficiency.key")
+	}
+
+	response, err := c.doGetProficiency(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiProficiencyToProficiency(response), nil
+}
+
+func (c *client) doGetProficiency(key string) (*apiEntities.Proficiency, error) {
+	response, err := c.client.GetProficiency(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }

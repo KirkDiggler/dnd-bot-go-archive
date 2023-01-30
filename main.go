@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -41,6 +42,8 @@ func init() {
 	flag.StringVar(&redistHost, "redis", "localhost:6379",
 		"Redis host")
 	flag.Parse()
+
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 }
 
 func main() {
@@ -101,7 +104,7 @@ func main() {
 		Token:         token,
 		GuildID:       guildID,
 		AppID:         appID,
-		Client:        dnd5eClient,
+		DnD5EClient:   dnd5eClient,
 		PartyRepo:     partyRepo,
 		CharacterRepo: charManager,
 	})

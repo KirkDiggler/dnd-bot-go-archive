@@ -4,11 +4,12 @@ go 1.19
 
 require (
 	github.com/bwmarrin/discordgo v0.26.1
-	github.com/fadedpez/dnd5e-api v0.0.0-20230126021424-7e5b546f6bb6
+	github.com/fadedpez/dnd5e-api v0.0.0-20230130054644-8fef11eb18de
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
 	github.com/go-redis/redismock/v9 v9.0.0-rc.2
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.1
+	golang.org/x/sync v0.1.0
 )
 
 require (
