@@ -166,7 +166,7 @@ func dataToReferenceOption(input *ReferenceOption) *entities.ReferenceOption {
 		Reference: &entities.ReferenceItem{
 			Key:  input.Reference.Key,
 			Name: input.Reference.Name,
-			Type: input.Reference.Type,
+			Type: entities.ReferenceType(input.Reference.Type),
 		},
 	}
 }
@@ -213,7 +213,7 @@ func referenceItemToData(input *entities.ReferenceItem) *ReferenceItem {
 	return &ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
-		Type: input.Type,
+		Type: string(input.Type),
 	}
 }
 
@@ -225,7 +225,7 @@ func dataToReferenceItem(input *ReferenceItem) *entities.ReferenceItem {
 	return &entities.ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
-		Type: input.Type,
+		Type: entities.ReferenceType(input.Type),
 	}
 }
 
@@ -263,6 +263,7 @@ func statusToChoiceStatus(input Status) entities.ChoiceStatus {
 		return entities.ChoiceStatusUnset
 	}
 }
+
 func choiceTypeToType(input entities.ChoiceType) Type {
 	switch input {
 	case entities.ChoiceTypeProficiency:

@@ -9,4 +9,5 @@ type Client interface {
 	ListRaces() ([]*entities.Race, error)
 	GetRace(key string) (*entities.Race, error)
 	GetClass(key string) (*entities.Class, error)
+	GetProficiency(key string) (*entities.Proficiency, error)
 }

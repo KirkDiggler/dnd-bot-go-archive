@@ -43,7 +43,6 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 		Key:                        input.Key,
 		Name:                       input.Name,
 		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
-		StartingProficiencies:      apiProficienciesToProficiencies(input.StartingProficiencies),
 		AbilityBonuses:             apiAbilityBonusesToAbilityBonuses(input.AbilityBonuses),
 	}
 }
@@ -91,7 +90,7 @@ func referenceItemKeyToAttribute(input string) entities.Attribute {
 	}
 }
 
-func apiProficienciesToProficiencies(input []*apiEntities.ReferenceItem) []*entities.Proficiency {
+func apiProficienciesToProficiencies(input []*apiEntities.Proficiency) []*entities.Proficiency {
 	output := make([]*entities.Proficiency, len(input))
 	for i, apiProficiency := range input {
 		output[i] = apiProficiencyToProficiency(apiProficiency)
@@ -100,7 +99,7 @@ func apiProficienciesToProficiencies(input []*apiEntities.ReferenceItem) []*enti
 	return output
 }
 
-func apiProficiencyToProficiency(input *apiEntities.ReferenceItem) *entities.Proficiency {
+func apiProficiencyToProficiency(input *apiEntities.Proficiency) *entities.Proficiency {
 	return &entities.Proficiency{
 		Key:  input.Key,
 		Name: input.Name,
@@ -113,7 +112,6 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 		Name:                     input.Name,
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
-		Proficiencies:            apiProficienciesToProficiencies(input.Proficiencies),
 	}
 }
 
@@ -213,6 +211,24 @@ func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *entities
 	return &entities.ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
-		Type: input.Type,
+		Type: typeStringToReferenceType(input.Type),
+	}
+}
+
+func typeStringToReferenceType(input string) entities.ReferenceType {
+	switch input {
+	case "equipment":
+		return entities.ReferenceTypeEquipment
+	case "proficiencies":
+		return entities.ReferenceTypeProficiency
+	case "languages":
+		return entities.ReferenceTypeLanguage
+	case "ability-scores":
+		return entities.ReferenceTypeAbilityScore
+	case "skills":
+		return entities.ReferenceTypeSkill
+	default:
+		log.Println("Unknown reference type: ", input)
+		return entities.ReferenceTypeUnset
 	}
 }
