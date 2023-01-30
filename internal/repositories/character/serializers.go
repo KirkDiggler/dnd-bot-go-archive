@@ -106,18 +106,22 @@ func rollResultsToRollDatas(results []*dice.RollResult) []*RollData {
 	return data
 }
 
-func proficienciesToDatas(input []*entities.Proficiency) []*Proficiency {
-	data := make([]*Proficiency, len(input))
-	for i, p := range input {
-		data[i] = proficiencyToData(p)
+func proficienciesToDatas(input map[entities.ProficiencyType][]*entities.Proficiency) []*Proficiency {
+	datas := make([]*Proficiency, 0)
+
+	for _, v := range input {
+		for _, p := range v {
+			datas = append(datas, proficiencyToData(p))
+		}
 	}
 
-	return data
+	return datas
 }
 
 func proficiencyToData(input *entities.Proficiency) *Proficiency {
 	return &Proficiency{
 		Key:  input.Key,
 		Name: input.Name,
+		Type: string(input.Type),
 	}
 }

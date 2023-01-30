@@ -3,6 +3,8 @@ package characters
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
@@ -15,40 +17,49 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 		return nil, dnderr.NewMissingParameterError("data")
 	}
 
-	race, err := m.client.GetRace(data.RaceKey)
-	if err != nil {
-		return nil, err
-	}
+	g, _ := errgroup.WithContext(ctx)
 
-	class, err := m.client.GetClass(data.ClassKey)
-	if err != nil {
-		return nil, err
-	}
+	var race *entities.Race
+	var class *entities.Class
 
-	return &entities.Character{
-		ID:            data.ID,
-		Name:          data.Name,
-		OwnerID:       data.OwnerID,
-		Race:          race,
-		Class:         class,
-		Attribues:     attributDataToAttributes(data.Attributes),
-		Rolls:         rollDatasToRollResults(data.Rolls),
-		Proficiencies: datasToProficiencies(data.Proficiencies),
-	}, nil
-}
+	g.Go(func() (err error) {
 
-func datasToProficiencies(data []*character.Proficiency) []*entities.Proficiency {
-	if data == nil {
+		race, err = m.client.GetRace(data.RaceKey)
+		if err != nil {
+			return err
+		}
 		return nil
+	})
+
+	g.Go(func() (err error) {
+		class, err = m.client.GetClass(data.ClassKey)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	err := g.Wait()
+	if err != nil {
+		return nil, err
 	}
 
-	proficiencies := make([]*entities.Proficiency, 0, len(data))
-	for _, d := range data {
-		proficiencies = append(proficiencies, dataToProficiency(d))
+	char := &entities.Character{
+		ID:        data.ID,
+		Name:      data.Name,
+		OwnerID:   data.OwnerID,
+		Race:      race,
+		Class:     class,
+		Attribues: attributDataToAttributes(data.Attributes),
+		Rolls:     rollDatasToRollResults(data.Rolls),
 	}
 
-	return proficiencies
+	for _, prof := range data.Proficiencies {
+		char.AddProficiency(dataToProficiency(prof))
+	}
 
+	return char, nil
 }
 
 func dataToProficiency(data *character.Proficiency) *entities.Proficiency {
@@ -59,8 +70,10 @@ func dataToProficiency(data *character.Proficiency) *entities.Proficiency {
 	return &entities.Proficiency{
 		Name: data.Name,
 		Key:  data.Key,
+		Type: entities.ProficiencyType(data.Type),
 	}
 }
+
 func attributDataToAttributes(data *character.AttributeData) map[entities.Attribute]*entities.AbilityScore {
 	if data == nil {
 		data = &character.AttributeData{}
@@ -115,13 +128,38 @@ func characterToData(input *entities.Character) *character.Data {
 	}
 
 	return &character.Data{
-		ID:         input.ID,
-		Name:       input.Name,
-		OwnerID:    input.OwnerID,
-		RaceKey:    input.Race.Key,
-		ClassKey:   input.Class.Key,
-		Attributes: attributesToAttributeData(input.Attribues),
-		Rolls:      rollResultsToRollDatas(input.Rolls),
+		ID:            input.ID,
+		Name:          input.Name,
+		OwnerID:       input.OwnerID,
+		RaceKey:       input.Race.Key,
+		ClassKey:      input.Class.Key,
+		Attributes:    attributesToAttributeData(input.Attribues),
+		Rolls:         rollResultsToRollDatas(input.Rolls),
+		Proficiencies: proficienciesToDatas(input.Proficiencies),
+	}
+}
+
+func proficienciesToDatas(input map[entities.ProficiencyType][]*entities.Proficiency) []*character.Proficiency {
+	datas := make([]*character.Proficiency, 0)
+
+	for _, v := range input {
+		for _, p := range v {
+			datas = append(datas, proficiencyToData(p))
+		}
+	}
+
+	return datas
+}
+
+func proficiencyToData(input *entities.Proficiency) *character.Proficiency {
+	if input == nil {
+		return nil
+	}
+
+	return &character.Proficiency{
+		Name: input.Name,
+		Key:  input.Key,
+		Type: string(input.Type),
 	}
 }
 

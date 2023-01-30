@@ -32,7 +32,9 @@ type AbilityScoreData struct {
 	Score int `json:"score"`
 	Bonus int `json:"bonus"`
 }
+
 type Proficiency struct {
 	Key  string `json:"key"`
 	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
 }

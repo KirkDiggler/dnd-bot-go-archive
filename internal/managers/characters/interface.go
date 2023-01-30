@@ -7,6 +7,7 @@ import (
 )
 
 type Manager interface {
+	AddProficiency(ctx context.Context, char *entities.Character, reference *entities.ReferenceItem) (*entities.Character, error)
 	Put(ctx context.Context, character *entities.Character) (*entities.Character, error)
 	Get(ctx context.Context, id string) (*entities.Character, error)
 	GetChoices(ctx context.Context, characterID string, choiceType entities.ChoiceType) ([]*entities.Choice, error)

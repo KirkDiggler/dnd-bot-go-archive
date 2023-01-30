@@ -10,16 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fadedpez/dnd5e-api v0.0.0-20230104060115-de76cced6db8 h1:mhIC1KtLWJGh9iPJeABiKUSRwNY8+05n2clB/m9YA2w=
-github.com/fadedpez/dnd5e-api v0.0.0-20230104060115-de76cced6db8/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
-github.com/fadedpez/dnd5e-api v0.0.0-20230120041029-277bd33b5802 h1:HZ4ZwdBR4QUVihokAM02LKXyOsD+krv1rUPUz0R8dd0=
-github.com/fadedpez/dnd5e-api v0.0.0-20230120041029-277bd33b5802/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
-github.com/fadedpez/dnd5e-api v0.0.0-20230125080549-70ea6fa59f68 h1:+iwyJiPSJM2g39iwurWVKP7XYxG2yM1Vm/slN0CTq8o=
-github.com/fadedpez/dnd5e-api v0.0.0-20230125080549-70ea6fa59f68/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
-github.com/fadedpez/dnd5e-api v0.0.0-20230126021424-7e5b546f6bb6 h1:zpu1Mm5Xdg0tgB9EpuAqYKlUQcPy+Xc1fPk5iYT3a/g=
-github.com/fadedpez/dnd5e-api v0.0.0-20230126021424-7e5b546f6bb6/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
-github.com/fadedpez/dnd5e-api v0.0.0-20230130032421-c0f1672ff0d8 h1:qyyUkRFiVrq3kc8VJUyMbN2fVE46/ZWWvUjEc7WRSY8=
-github.com/fadedpez/dnd5e-api v0.0.0-20230130032421-c0f1672ff0d8/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
+github.com/fadedpez/dnd5e-api v0.0.0-20230130054644-8fef11eb18de h1:+/r2UQ3fy6X9WB/3aQNWP5tioviE9sAxtNDVqOFPFRg=
+github.com/fadedpez/dnd5e-api v0.0.0-20230130054644-8fef11eb18de/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
@@ -122,6 +114,8 @@ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.1.0 h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=
+golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

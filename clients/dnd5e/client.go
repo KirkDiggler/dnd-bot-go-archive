@@ -3,9 +3,8 @@ package dnd5e
 import (
 	"net/http"
 
-	apiEntities "github.com/fadedpez/dnd5e-api/entities"
-
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
@@ -63,19 +62,6 @@ func (c *client) GetRace(key string) (*entities.Race, error) {
 
 	race := apiRaceToRace(response)
 
-	proficiencies := make([]*entities.Proficiency, len(response.StartingProficiencies))
-
-	for i, proficiency := range response.StartingProficiencies {
-		prof, err := c.doGetProficiency(proficiency.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		proficiencies[i] = apiProficiencyToProficiency(prof)
-	}
-
-	race.StartingProficiencies = proficiencies
-
 	return race, nil
 }
 
@@ -85,21 +71,7 @@ func (c *client) GetClass(key string) (*entities.Class, error) {
 		return nil, err
 	}
 
-	class := apiClassToClass(response)
-
-	proficiencies := make([]*entities.Proficiency, len(response.Proficiencies))
-	for i, proficiency := range response.Proficiencies {
-		prof, err := c.doGetProficiency(proficiency.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		proficiencies[i] = apiProficiencyToProficiency(prof)
-	}
-
-	class.Proficiencies = proficiencies
-
-	return class, nil
+	return apiClassToClass(response), nil
 }
 
 func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {

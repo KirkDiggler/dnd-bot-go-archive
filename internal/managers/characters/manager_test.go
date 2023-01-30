@@ -62,6 +62,7 @@ func (s *managerSuite) SetupTest() {
 		},
 		Rolls: make([]*dice.RollResult, 0),
 	}
+
 	s.characterData = characterToData(s.character)
 	s.fixture = &manager{
 		charRepo:  s.mockRepo,

@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"log"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 
@@ -36,8 +39,8 @@ type Character struct {
 }
 
 type CharacterConfig struct {
-	Client        dnd5e.Client
-	CharacterRepo characters.Manager
+	Client           dnd5e.Client
+	CharacterManager characters.Manager
 }
 
 type charChoice struct {
@@ -55,12 +58,12 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.Client")
 	}
 
-	if cfg.CharacterRepo == nil {
-		return nil, dnderr.NewMissingParameterError("cfg.CharacterRepo")
+	if cfg.CharacterManager == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.CharacterManager")
 	}
 	return &Character{
 		client:      cfg.Client,
-		charManager: cfg.CharacterRepo,
+		charManager: cfg.CharacterManager,
 	}, nil
 }
 
@@ -251,6 +254,7 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 
 	components := make([]discordgo.SelectMenuOption, 0)
 	for idx, roll := range rolls {
+		log.Println("roll: ", roll, "used: ", roll.Used)
 		if !roll.Used {
 			components = append(components, discordgo.SelectMenuOption{
 				Label: fmt.Sprintf("%v  %d", roll.Rolls, roll.Total-roll.Lowest),
@@ -309,10 +313,13 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 		},
 	}
 
+	log.Println("finished generating response")
+
 	return response, nil
 }
 
 func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Rolling for", i.Member.User.Username)
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
@@ -340,13 +347,13 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 	char.Rolls = rolls
 	_, err = c.charManager.Put(context.Background(), char)
 	if err != nil {
-		log.Println(err)
+		log.Println("error returned from charManager.Put: ", err)
 		return // TODO: Handle error
 	}
 
 	attributeSelectData, err := c.generateAttributeSelect(char, rolls, i)
 	if err != nil {
-		log.Println(err)
+		log.Println("error returned from generateAttributeSelect: ", err)
 		return // TODO handle error
 	}
 	msgBuilder := strings.Builder{}
@@ -364,9 +371,11 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 		},
 	}
 
+	log.Println("handleRollCharacter: sending response")
 	err = s.InteractionRespond(i.Interaction, response)
+	log.Println("handleRollCharacter: response sent")
 	if err != nil {
-		log.Println(err)
+		log.Println("error returned from InteractionRespond: ", err)
 		return // TODO handle error
 	}
 }
@@ -423,6 +432,7 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 }
 
 func (c *Character) initializeCharacter(charID string) error {
+	log.Println("Initializing character", charID)
 	char, err := c.charManager.Get(context.Background(), charID)
 	if err != nil {
 		return err
@@ -435,9 +445,19 @@ func (c *Character) initializeCharacter(charID string) error {
 	if char.Class == nil {
 		return dnderr.NewInvalidEntityError("Class is nil")
 	}
+	g, runCtx := errgroup.WithContext(context.Background())
+
 	// Load the race starting data
 	for _, prof := range char.Race.StartingProficiencies {
-		char.AddProficiency(prof)
+		prof := prof
+		g.Go(func() error {
+			char, err = c.charManager.AddProficiency(runCtx, char, prof)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 	}
 
 	for _, bonus := range char.Race.AbilityBonuses {
@@ -445,14 +465,30 @@ func (c *Character) initializeCharacter(charID string) error {
 	}
 
 	for _, prof := range char.Class.Proficiencies {
-		char.AddProficiency(prof)
+		prof := prof
+		g.Go(func() error {
+			char, err = c.charManager.AddProficiency(runCtx, char, prof)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 	}
 
+	err = g.Wait()
+	if err != nil {
+		return err
+	}
 	_, err = c.charManager.Put(context.Background(), char)
 
-	return nil
+	log.Println("Character initialized", charID)
+
+	return err
 }
+
 func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Handling character select")
 	selectString := strings.Split(i.MessageComponentData().Values[0], ":")
 	if len(selectString) != 4 {
 		log.Printf("Invalid select string: %s", selectString)
@@ -502,6 +538,8 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 		log.Println(err)
 		return // TODO handle error
 	}
+
+	log.Println("Character selected", char.ID)
 
 	c.handleRollCharacter(s, i)
 }
@@ -612,6 +650,8 @@ func (c *Character) generateProficiencyChoices(char *entities.Character, choices
 }
 
 func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("handleProficiencySelect")
+
 	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,
 		LastToken:   i.Token,
@@ -636,6 +676,8 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 
 	var done = true
 
+	g, runCtx := errgroup.WithContext(context.Background())
+
 	for _, choice := range choices {
 		if choice.Status == entities.ChoiceStatusSelected {
 			continue
@@ -646,23 +688,40 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 
 			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
-				parts := strings.Split(value, "::")
-				log.Println(parts)
-				if parts[0] == string(entities.OptionTypeChoice) {
-					// if we have a choice, we will check which was choses, set that to active and pass that choice back in
-					// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
-					selectedChoiceIndex, err = strconv.Atoi(parts[2])
-					if err != nil {
-						log.Println(err)
-						return // TODO handle error
+				value := value
+
+				g.Go(func() error {
+					parts := strings.Split(value, "::")
+					log.Println(parts)
+					if parts[0] == string(entities.OptionTypeChoice) {
+						// if we have a choice, we will check which was choses, set that to active and pass that choice back in
+						// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
+						selectedChoiceIndex, err = strconv.Atoi(parts[2])
+						if err != nil {
+							log.Println(err)
+							return err
+						}
+					} else {
+						char, err = c.charManager.AddProficiency(runCtx, char, &entities.ReferenceItem{
+							Key:  parts[1],
+							Type: entities.ReferenceTypeProficiency,
+						})
+						if err != nil {
+							log.Println(err)
+							return err
+						}
 					}
-				} else {
-					char.AddProficiency(&entities.Proficiency{
-						Key:  parts[1],
-						Name: parts[2],
-					})
-				}
+
+					return nil
+				})
 			}
+
+			err = g.Wait()
+			if err != nil {
+				log.Println(err)
+				return // TODO handle error
+			}
+
 			choice.Status = entities.ChoiceStatusSelected
 
 			// gross, but I need to get the last choice to set other options inactive
@@ -685,6 +744,11 @@ func (c *Character) handleProficiencySelect(s *discordgo.Session, i *discordgo.I
 			done = false
 			break
 		}
+	}
+	err = g.Wait()
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
 	}
 
 	err = c.charManager.SaveChoices(context.Background(), char.ID, entities.ChoiceTypeProficiency, choices)
@@ -828,6 +892,7 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 
 	options := make([]discordgo.SelectMenuOption, len(selectedChoice.Options))
 
+	log.Println("selectedChoice.Options count: ", len(selectedChoice.Options))
 	for idx, choice := range selectedChoice.Options {
 		if choice.GetOptionType() == entities.OptionTypeChoice {
 			options[idx] = discordgo.SelectMenuOption{
@@ -840,7 +905,6 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 				Value: fmt.Sprintf("%s:%s", choice.GetOptionType(), choice.GetKey()),
 			}
 		}
-
 	}
 
 	components := []discordgo.MessageComponent{
