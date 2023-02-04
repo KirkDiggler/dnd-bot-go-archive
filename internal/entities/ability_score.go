@@ -4,6 +4,8 @@ import "fmt"
 
 type Attribute string
 
+var Attributes = []Attribute{AttributeStrength, AttributeDexterity, AttributeConstitution, AttributeIntelligence, AttributeWisdom, AttributeCharisma}
+
 const (
 	AttributeNone         Attribute = ""
 	AttributeStrength     Attribute = "Str"

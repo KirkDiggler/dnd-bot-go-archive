@@ -109,8 +109,11 @@ func (c *Character) String() string {
 	}
 
 	msg.WriteString("\n**Attributes**:\n")
-	for attr, score := range c.Attribues {
-		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, score))
+	for _, attr := range Attributes {
+		if c.Attribues[attr] == nil {
+			continue
+		}
+		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, c.Attribues[attr]))
 	}
 
 	msg.WriteString("\n**Proficiencies**:\n")
