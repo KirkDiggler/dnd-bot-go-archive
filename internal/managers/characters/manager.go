@@ -97,7 +97,7 @@ func (m *manager) AddInventory(ctx context.Context, char *entities.Character, re
 		return nil, err
 	}
 
-	char.AddEquipment(equipment)
+	char.AddInventory(equipment)
 
 	return char, nil
 }

@@ -19,6 +19,7 @@ type Character struct {
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
+	Inventory          map[string][]Equipment
 	mu                 sync.Mutex
 }
 
@@ -72,6 +73,20 @@ func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 	}
 
 	c.Attribues[ab.Attribute] = c.Attribues[ab.Attribute].AddBonus(ab.Bonus)
+}
+
+func (c *Character) AddInventory(e Equipment) {
+	if c.Inventory == nil {
+		c.Inventory = make(map[string][]Equipment)
+	}
+
+	c.mu.Lock()
+	if c.Inventory[e.GetEquipmentType()] == nil {
+		c.Inventory[e.GetEquipmentType()] = make([]Equipment, 0)
+	}
+
+	c.Inventory[e.GetEquipmentType()] = append(c.Inventory[e.GetEquipmentType()], e)
+	c.mu.Unlock()
 }
 
 func (c *Character) AddProficiency(p *Proficiency) {
