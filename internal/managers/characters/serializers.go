@@ -47,13 +47,21 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 	}
 
 	char := &entities.Character{
-		ID:        data.ID,
-		Name:      data.Name,
-		OwnerID:   data.OwnerID,
-		Race:      race,
-		Class:     class,
-		Attribues: attributDataToAttributes(data.Attributes),
-		Rolls:     rollDatasToRollResults(data.Rolls),
+		ID:               data.ID,
+		Name:             data.Name,
+		OwnerID:          data.OwnerID,
+		Speed:            data.Speed,
+		AC:               data.AC,
+		MaxHitPoints:     data.MaxHitPoints,
+		CurrentHitPoints: data.CurrentHitPoints,
+		HitDie:           data.HitDie,
+		Experience:       data.Experience,
+		Level:            data.Level,
+		NextLevel:        data.NextLevel,
+		Race:             race,
+		Class:            class,
+		Attribues:        attributDataToAttributes(data.Attributes),
+		Rolls:            rollDatasToRollResults(data.Rolls),
 	}
 
 	for _, prof := range data.Proficiencies {

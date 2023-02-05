@@ -409,6 +409,8 @@ func typeStringToReferenceType(input string) entities.ReferenceType {
 		return entities.ReferenceTypeAbilityScore
 	case "skills":
 		return entities.ReferenceTypeSkill
+	case "weapon-properties":
+		return entities.ReferenceTypeWeaponProperty
 	default:
 		log.Println("Unknown reference type: ", input)
 		return entities.ReferenceTypeUnset
