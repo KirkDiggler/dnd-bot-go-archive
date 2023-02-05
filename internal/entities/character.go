@@ -148,13 +148,14 @@ func (c *Character) String() string {
 		msg.WriteString(fmt.Sprintf("%s, ", roll))
 	}
 	msg.WriteString("\n")
-	msg.WriteString(fmt.Sprintf("**Speed**: %d\n", c.Speed))
-	msg.WriteString(fmt.Sprintf("**Hit Die**: %d\n", c.HitDie))
-	msg.WriteString(fmt.Sprintf("**AC**: %d\n", c.AC))
-	msg.WriteString(fmt.Sprintf("**Max Hit Points**: %d\n", c.MaxHitPoints))
-	msg.WriteString(fmt.Sprintf("**Current Hit Points**: %d\n", c.CurrentHitPoints))
-	msg.WriteString(fmt.Sprintf("**Level**: %d\n", c.Level))
-	msg.WriteString(fmt.Sprintf("**Experience**: %d\n", c.Experience))
+	msg.WriteString("\n**Stats**:\n")
+	msg.WriteString(fmt.Sprintf("  -  Speed: %d\n", c.Speed))
+	msg.WriteString(fmt.Sprintf("  -  Hit Die: %d\n", c.HitDie))
+	msg.WriteString(fmt.Sprintf("  -  AC: %d\n", c.AC))
+	msg.WriteString(fmt.Sprintf("  -  Max Hit Points: %d\n", c.MaxHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Current Hit Points: %d\n", c.CurrentHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Level: %d\n", c.Level))
+	msg.WriteString(fmt.Sprintf("  -  Experience: %d\n", c.Experience))
 
 	msg.WriteString("\n**Attributes**:\n")
 	for _, attr := range Attributes {

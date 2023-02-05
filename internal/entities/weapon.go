@@ -16,7 +16,7 @@ type Weapon struct {
 }
 
 func (w *Weapon) GetEquipmentType() string {
-	return "weapon"
+	return "Weapon"
 }
 
 func (w *Weapon) GetName() string {
