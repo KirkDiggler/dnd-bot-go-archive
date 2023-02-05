@@ -20,7 +20,16 @@ type Character struct {
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
 	Inventory          map[string][]Equipment
-	mu                 sync.Mutex
+
+	HitDie           int
+	AC               int
+	MaxHitPoints     int
+	CurrentHitPoints int
+	Level            int
+	Experience       int
+	NextLevel        int
+
+	mu sync.Mutex
 }
 
 func (c *Character) AddAttribute(attr Attribute, score int) {

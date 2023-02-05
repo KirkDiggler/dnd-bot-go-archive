@@ -119,6 +119,8 @@ func (c *Character) initializeCharacter(charID string) error {
 	}
 	g, runCtx := errgroup.WithContext(context.Background())
 
+	char.HitDie = char.Class.HitDie
+
 	// Load the race starting data
 	for _, prof := range char.Race.StartingProficiencies {
 		prof := prof
