@@ -120,6 +120,10 @@ func (c *Character) initializeCharacter(charID string) error {
 	g, runCtx := errgroup.WithContext(context.Background())
 
 	char.HitDie = char.Class.HitDie
+	char.AC = 10
+	char.Level = 1
+
+	char.Speed = char.Race.Speed
 
 	// Load the race starting data
 	for _, prof := range char.Race.StartingProficiencies {

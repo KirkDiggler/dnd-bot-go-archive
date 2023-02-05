@@ -48,6 +48,7 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 	return &entities.Race{
 		Key:                        input.Key,
 		Name:                       input.Name,
+		Speed:                      input.Speed,
 		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
 		StartingProficiencies:      apiReferenceItemsToReferenceItems(input.StartingProficiencies),
 		AbilityBonuses:             apiAbilityBonusesToAbilityBonuses(input.AbilityBonuses),
