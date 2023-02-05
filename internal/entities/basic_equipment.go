@@ -8,7 +8,7 @@ type BasicEquipment struct {
 }
 
 func (e *BasicEquipment) GetEquipmentType() string {
-	return "basic_equipment"
+	return "BasicEquipment"
 }
 
 func (e *BasicEquipment) GetName() string {

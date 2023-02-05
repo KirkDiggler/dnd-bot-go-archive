@@ -68,15 +68,23 @@ func characterToData(input *entities.Character) *Data {
 	}
 
 	return &Data{
-		ID:            input.ID,
-		OwnerID:       input.OwnerID,
-		Name:          input.Name,
-		RaceKey:       raceKey,
-		ClassKey:      classKey,
-		Attributes:    data,
-		Rolls:         rollResultsToRollDatas(input.Rolls),
-		Proficiencies: proficienciesToDatas(input.Proficiencies),
-		Inventory:     equipmentsToDatas(input.Inventory),
+		ID:               input.ID,
+		OwnerID:          input.OwnerID,
+		Name:             input.Name,
+		HitDie:           input.HitDie,
+		AC:               input.AC,
+		MaxHitPoints:     input.MaxHitPoints,
+		CurrentHitPoints: input.CurrentHitPoints,
+		Experience:       input.Experience,
+		NextLevel:        input.NextLevel,
+		Speed:            input.Speed,
+		Level:            input.Level,
+		RaceKey:          raceKey,
+		ClassKey:         classKey,
+		Attributes:       data,
+		Rolls:            rollResultsToRollDatas(input.Rolls),
+		Proficiencies:    proficienciesToDatas(input.Proficiencies),
+		Inventory:        equipmentsToDatas(input.Inventory),
 	}
 }
 func abilityScoreToData(input *entities.AbilityScore) *AbilityScoreData {

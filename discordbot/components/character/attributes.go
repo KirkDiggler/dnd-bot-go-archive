@@ -197,8 +197,6 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 		},
 	}
 
-	log.Println("finished generating response")
-
 	return response, nil
 }
 
@@ -255,9 +253,7 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 		},
 	}
 
-	log.Println("handleRollCharacter: sending response")
 	err = s.InteractionRespond(i.Interaction, response)
-	log.Println("handleRollCharacter: response sent")
 	if err != nil {
 		log.Println("error returned from InteractionRespond: ", err)
 		return // TODO handle error

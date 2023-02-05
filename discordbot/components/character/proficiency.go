@@ -230,6 +230,13 @@ func (c *Character) handleProficiencyStep(s *discordgo.Session, i *discordgo.Int
 		log.Println(err)
 		return // TODO handle error
 	}
+	char.SetHitpoints()
+
+	char, err = c.charManager.Put(context.Background(), char)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
 
 	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,

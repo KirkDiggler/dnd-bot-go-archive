@@ -20,9 +20,34 @@ type Character struct {
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
 	Inventory          map[string][]Equipment
-	mu                 sync.Mutex
+
+	HitDie           int
+	AC               int
+	MaxHitPoints     int
+	CurrentHitPoints int
+	Level            int
+	Experience       int
+	NextLevel        int
+
+	mu sync.Mutex
 }
 
+func (c *Character) SetHitpoints() {
+	if c.Attribues == nil {
+		return
+	}
+
+	if c.Attribues[AttributeConstitution] == nil {
+		return
+	}
+
+	if c.HitDie == 0 {
+		return
+	}
+
+	c.MaxHitPoints = c.HitDie + c.Attribues[AttributeConstitution].Bonus
+	c.CurrentHitPoints = c.MaxHitPoints
+}
 func (c *Character) AddAttribute(attr Attribute, score int) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
@@ -122,6 +147,15 @@ func (c *Character) String() string {
 	for _, roll := range c.Rolls {
 		msg.WriteString(fmt.Sprintf("%s, ", roll))
 	}
+	msg.WriteString("\n")
+	msg.WriteString("\n**Stats**:\n")
+	msg.WriteString(fmt.Sprintf("  -  Speed: %d\n", c.Speed))
+	msg.WriteString(fmt.Sprintf("  -  Hit Die: %d\n", c.HitDie))
+	msg.WriteString(fmt.Sprintf("  -  AC: %d\n", c.AC))
+	msg.WriteString(fmt.Sprintf("  -  Max Hit Points: %d\n", c.MaxHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Current Hit Points: %d\n", c.CurrentHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Level: %d\n", c.Level))
+	msg.WriteString(fmt.Sprintf("  -  Experience: %d\n", c.Experience))
 
 	msg.WriteString("\n**Attributes**:\n")
 	for _, attr := range Attributes {

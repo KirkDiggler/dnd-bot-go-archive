@@ -48,6 +48,7 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 	return &entities.Race{
 		Key:                        input.Key,
 		Name:                       input.Name,
+		Speed:                      input.Speed,
 		StartingProficiencyOptions: apiChoiceOptionToChoice(input.StartingProficiencyOptions),
 		StartingProficiencies:      apiReferenceItemsToReferenceItems(input.StartingProficiencies),
 		AbilityBonuses:             apiAbilityBonusesToAbilityBonuses(input.AbilityBonuses),
@@ -129,6 +130,7 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 	return &entities.Class{
 		Key:                      input.Key,
 		Name:                     input.Name,
+		HitDie:                   input.HitDie,
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
 		Proficiencies:            apiReferenceItemsToReferenceItems(input.Proficiencies),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
@@ -407,6 +409,8 @@ func typeStringToReferenceType(input string) entities.ReferenceType {
 		return entities.ReferenceTypeAbilityScore
 	case "skills":
 		return entities.ReferenceTypeSkill
+	case "weapon-properties":
+		return entities.ReferenceTypeWeaponProperty
 	default:
 		log.Println("Unknown reference type: ", input)
 		return entities.ReferenceTypeUnset
