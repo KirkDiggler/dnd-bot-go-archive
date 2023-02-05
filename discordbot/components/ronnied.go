@@ -107,6 +107,28 @@ func (c *RonnieD) RonnieRollBack(s *discordgo.Session, i *discordgo.InteractionC
 		log.Print(err)
 	}
 }
+
+func (c *RonnieD) HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	grabBag := []string{
+		"You know it Bro!",
+		"Right back at you",
+		"This guy get's it",
+		"💯",
+	}
+
+	result := grabBag[rand.Intn(len(grabBag))]
+	if m.Content == "thanks ronnie" || m.Content == "thank's ronnie" || m.Content == "thanks ronnie d" || m.Content == "thank's ronnie d" {
+		_, err := s.ChannelMessageSend(m.ChannelID, result)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+}
+
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:

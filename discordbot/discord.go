@@ -109,6 +109,7 @@ func (b *bot) Start() error {
 	})
 
 	// RonnieD commands
+	b.session.AddHandler(b.ronnieDComponent.HandleMessageCreate)
 	b.session.AddHandler(b.ronnieDComponent.HandleInteractionCreate)
 	ronnieCmd := b.ronnieDComponent.GetApplicationCommand()
 
