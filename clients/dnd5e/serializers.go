@@ -132,9 +132,25 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
 		Proficiencies:            apiReferenceItemsToReferenceItems(input.Proficiencies),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
+		StartingEquipment:        apiStartingEquipmentsToStartingEquipments(input.StartingEquipment),
 	}
 }
 
+func apiStartingEquipmentToStartingEquipment(input *apiEntities.StartingEquipment) *entities.StartingEquipment {
+	return &entities.StartingEquipment{
+		Quantity:  input.Quantity,
+		Equipment: apiReferenceItemToReferenceItem(input.Equipment),
+	}
+}
+
+func apiStartingEquipmentsToStartingEquipments(input []*apiEntities.StartingEquipment) []*entities.StartingEquipment {
+	output := make([]*entities.StartingEquipment, len(input))
+	for i, apiStartingEquipment := range input {
+		output[i] = apiStartingEquipmentToStartingEquipment(apiStartingEquipment)
+	}
+
+	return output
+}
 func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.Equipment {
 	if input == nil {
 		return nil
@@ -175,7 +191,7 @@ func apiDamageToDamage(input *apiEntities.Damage) *damage.Damage {
 		return nil
 	}
 
-	diceParts := strings.Split("d", input.DamageDice)
+	diceParts := strings.Split(input.DamageDice, "d")
 	if len(diceParts) != 2 {
 		log.Printf("Unknown dice format %s", input.DamageDice)
 		return nil

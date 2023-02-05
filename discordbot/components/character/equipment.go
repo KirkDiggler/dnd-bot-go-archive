@@ -137,7 +137,13 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 						return // TODO handle error
 					}
 				} else {
-					log.Println("add equipment")
+					log.Println("add equipment", parts)
+					// add equipment
+					char, err = c.charManager.AddInventory(context.Background(), char, parts[1])
+					if err != nil {
+						log.Println(err)
+						return // TODO handle error
+					}
 				}
 			}
 			choice.Status = entities.ChoiceStatusSelected

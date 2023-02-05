@@ -14,3 +14,11 @@ type Armor struct {
 func (e *Armor) GetEquipmentType() string {
 	return "Armor"
 }
+
+func (e *Armor) GetName() string {
+	return e.Base.Name
+}
+
+func (e *Armor) GetKey() string {
+	return e.Base.Key
+}

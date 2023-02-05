@@ -18,3 +18,11 @@ type Weapon struct {
 func (w *Weapon) GetEquipmentType() string {
 	return "weapon"
 }
+
+func (w *Weapon) GetName() string {
+	return w.Base.Name
+}
+
+func (w *Weapon) GetKey() string {
+	return w.Base.Key
+}

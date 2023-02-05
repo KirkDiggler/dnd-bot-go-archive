@@ -143,5 +143,17 @@ func (c *Character) String() string {
 		}
 	}
 
+	msg.WriteString("\n**Inventory**:\n")
+	for key := range c.Inventory {
+		if c.Inventory[key] == nil {
+			continue
+		}
+
+		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
+		for _, item := range c.Inventory[key] {
+			msg.WriteString(fmt.Sprintf("    -  %s\n", item.GetName()))
+		}
+
+	}
 	return msg.String()
 }

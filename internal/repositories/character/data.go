@@ -9,6 +9,7 @@ type Data struct {
 	Attributes    *AttributeData `json:"attributes"`
 	Rolls         []*RollData    `json:"rolls"`
 	Proficiencies []*Proficiency `json:"proficiencies"`
+	Inventory     []*Equipment   `json:"inventory"`
 }
 
 type RollData struct {
@@ -34,6 +35,12 @@ type AbilityScoreData struct {
 }
 
 type Proficiency struct {
+	Key  string `json:"key"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
+}
+
+type Equipment struct {
 	Key  string `json:"key"`
 	Name string `json:"name,omitempty"`
 	Type string `json:"type,omitempty"`

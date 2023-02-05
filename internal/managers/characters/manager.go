@@ -79,20 +79,16 @@ func (m *manager) AddProficiency(ctx context.Context, char *entities.Character, 
 	return char, nil
 }
 
-func (m *manager) AddInventory(ctx context.Context, char *entities.Character, reference *entities.ReferenceItem) (*entities.Character, error) {
+func (m *manager) AddInventory(ctx context.Context, char *entities.Character, key string) (*entities.Character, error) {
 	if char == nil {
 		return nil, dnderr.NewMissingParameterError("char")
 	}
 
-	if reference == nil {
-		return nil, dnderr.NewMissingParameterError("reference")
+	if key == "" {
+		return nil, dnderr.NewMissingParameterError("key")
 	}
 
-	if reference.Type != entities.ReferenceTypeEquipment {
-		return nil, dnderr.NewInvalidParameterError("reference.Type", "must be a equipment")
-	}
-
-	equipment, err := m.client.GetEquipment(reference.Key)
+	equipment, err := m.client.GetEquipment(key)
 	if err != nil {
 		return nil, err
 	}

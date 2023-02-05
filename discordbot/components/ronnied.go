@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -30,7 +29,6 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 	c.RonnieRoll(s, i)
 }
 func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	rand.Seed(time.Now().UnixNano())
 	roll := rand.Intn(6) + 1
 	msgBuilder := strings.Builder{}
 	var response *discordgo.InteractionResponse

@@ -36,10 +36,8 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 		}
 	}
 	for idx := 0; idx < number-1; idx++ {
-		rand.Seed(time.Now().UnixNano())
 		class := classes[rand.Intn(len(classes))]
 		time.Sleep(1 * time.Nanosecond)
-		rand.Seed(time.Now().UnixNano())
 		race := races[rand.Intn(len(races))]
 		choices[idx] = &charChoice{
 			Race:  race,
@@ -150,6 +148,17 @@ func (c *Character) initializeCharacter(charID string) error {
 		})
 	}
 
+	for _, equip := range char.Class.StartingEquipment {
+		equip := equip
+		g.Go(func() error {
+			char, err = c.charManager.AddInventory(runCtx, char, equip.Equipment.Key)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+	}
 	err = g.Wait()
 	if err != nil {
 		return err
