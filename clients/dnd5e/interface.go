@@ -10,4 +10,5 @@ type Client interface {
 	GetRace(key string) (*entities.Race, error)
 	GetClass(key string) (*entities.Class, error)
 	GetProficiency(key string) (*entities.Proficiency, error)
+	GetEquipment(key string) (entities.Equipment, error)
 }

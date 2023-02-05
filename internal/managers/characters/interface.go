@@ -14,4 +14,5 @@ type Manager interface {
 	SaveChoices(ctx context.Context, characterID string, choiceType entities.ChoiceType, choices []*entities.Choice) error
 	SaveState(ctx context.Context, state *entities.CharacterCreation) (*entities.CharacterCreation, error)
 	GetState(ctx context.Context, id string) (*entities.CharacterCreation, error)
+	AddInventory(ctx context.Context, char *entities.Character, key string) (*entities.Character, error)
 }

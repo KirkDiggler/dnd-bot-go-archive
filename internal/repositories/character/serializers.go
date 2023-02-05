@@ -76,6 +76,7 @@ func characterToData(input *entities.Character) *Data {
 		Attributes:    data,
 		Rolls:         rollResultsToRollDatas(input.Rolls),
 		Proficiencies: proficienciesToDatas(input.Proficiencies),
+		Inventory:     equipmentsToDatas(input.Inventory),
 	}
 }
 func abilityScoreToData(input *entities.AbilityScore) *AbilityScoreData {
@@ -124,4 +125,25 @@ func proficiencyToData(input *entities.Proficiency) *Proficiency {
 		Name: input.Name,
 		Type: string(input.Type),
 	}
+}
+
+func equipmentToData(input entities.Equipment) *Equipment {
+	return &Equipment{
+		Key:  input.GetKey(),
+		Name: input.GetName(),
+		Type: input.GetEquipmentType(),
+	}
+}
+
+func equipmentsToDatas(input map[string][]entities.Equipment) []*Equipment {
+	datas := make([]*Equipment, 0)
+
+	for _, v := range input {
+		for _, e := range v {
+			log.Println("adding equipment: ", e.GetName())
+			datas = append(datas, equipmentToData(e))
+		}
+	}
+
+	return datas
 }

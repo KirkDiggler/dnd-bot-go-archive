@@ -68,7 +68,6 @@ func (r *redisRepo) Put(ctx context.Context, character *entities.Character) (*en
 	}
 
 	character.ID = character.OwnerID
-
 	data := dataToJSON(characterToData(character))
 
 	result := r.client.Set(ctx, getCharacterKey(character.ID), data, 0)

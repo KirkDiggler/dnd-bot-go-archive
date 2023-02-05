@@ -79,6 +79,25 @@ func (m *manager) AddProficiency(ctx context.Context, char *entities.Character, 
 	return char, nil
 }
 
+func (m *manager) AddInventory(ctx context.Context, char *entities.Character, key string) (*entities.Character, error) {
+	if char == nil {
+		return nil, dnderr.NewMissingParameterError("char")
+	}
+
+	if key == "" {
+		return nil, dnderr.NewMissingParameterError("key")
+	}
+
+	equipment, err := m.client.GetEquipment(key)
+	if err != nil {
+		return nil, err
+	}
+
+	char.AddInventory(equipment)
+
+	return char, nil
+}
+
 func (m *manager) SaveChoices(ctx context.Context, characterID string, choiceType entities.ChoiceType, choices []*entities.Choice) error {
 	if characterID == "" {
 		return dnderr.NewMissingParameterError("characterID")

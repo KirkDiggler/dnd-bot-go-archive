@@ -87,6 +87,19 @@ func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
 	return apiProficiencyToProficiency(response), nil
 }
 
+func (c *client) GetEquipment(key string) (entities.Equipment, error) {
+	if key == "" {
+		return nil, dnderr.NewMissingParameterError("GetEquipment.key")
+	}
+
+	response, err := c.client.GetEquipment(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiEquipmentInterfaceToEquipment(response), nil
+}
+
 func (c *client) doGetProficiency(key string) (*apiEntities.Proficiency, error) {
 	response, err := c.client.GetProficiency(key)
 	if err != nil {

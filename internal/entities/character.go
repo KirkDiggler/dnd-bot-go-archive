@@ -19,6 +19,7 @@ type Character struct {
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
+	Inventory          map[string][]Equipment
 	mu                 sync.Mutex
 }
 
@@ -74,6 +75,20 @@ func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 	c.Attribues[ab.Attribute] = c.Attribues[ab.Attribute].AddBonus(ab.Bonus)
 }
 
+func (c *Character) AddInventory(e Equipment) {
+	if c.Inventory == nil {
+		c.Inventory = make(map[string][]Equipment)
+	}
+
+	c.mu.Lock()
+	if c.Inventory[e.GetEquipmentType()] == nil {
+		c.Inventory[e.GetEquipmentType()] = make([]Equipment, 0)
+	}
+
+	c.Inventory[e.GetEquipmentType()] = append(c.Inventory[e.GetEquipmentType()], e)
+	c.mu.Unlock()
+}
+
 func (c *Character) AddProficiency(p *Proficiency) {
 	if c.Proficiencies == nil {
 		c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
@@ -109,8 +124,11 @@ func (c *Character) String() string {
 	}
 
 	msg.WriteString("\n**Attributes**:\n")
-	for attr, score := range c.Attribues {
-		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, score))
+	for _, attr := range Attributes {
+		if c.Attribues[attr] == nil {
+			continue
+		}
+		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, c.Attribues[attr]))
 	}
 
 	msg.WriteString("\n**Proficiencies**:\n")
@@ -125,5 +143,17 @@ func (c *Character) String() string {
 		}
 	}
 
+	msg.WriteString("\n**Inventory**:\n")
+	for key := range c.Inventory {
+		if c.Inventory[key] == nil {
+			continue
+		}
+
+		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
+		for _, item := range c.Inventory[key] {
+			msg.WriteString(fmt.Sprintf("    -  %s\n", item.GetName()))
+		}
+
+	}
 	return msg.String()
 }

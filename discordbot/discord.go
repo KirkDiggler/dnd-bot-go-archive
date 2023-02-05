@@ -3,6 +3,8 @@ package discordbot
 import (
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
@@ -21,7 +23,7 @@ type bot struct {
 
 	partyRepo          party.Interface
 	partyComponent     *components.Party
-	characterComponent *components.Character
+	characterComponent *character.Character
 	ronnieDComponent   *components.RonnieD
 }
 
@@ -76,7 +78,7 @@ func New(cfg *Config) (*bot, error) {
 		return nil, err
 	}
 
-	characterComponent, err := components.NewCharacter(&components.CharacterConfig{
+	characterComponent, err := character.NewCharacter(&character.CharacterConfig{
 		Client:           cfg.DnD5EClient,
 		CharacterManager: cfg.CharacterRepo,
 	})
@@ -107,6 +109,7 @@ func (b *bot) Start() error {
 	})
 
 	// RonnieD commands
+	b.session.AddHandler(b.ronnieDComponent.HandleMessageCreate)
 	b.session.AddHandler(b.ronnieDComponent.HandleInteractionCreate)
 	ronnieCmd := b.ronnieDComponent.GetApplicationCommand()
 

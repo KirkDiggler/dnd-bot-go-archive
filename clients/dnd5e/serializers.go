@@ -2,6 +2,12 @@ package dnd5e
 
 import (
 	"log"
+	"strconv"
+	"strings"
+
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
+
+	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
@@ -126,6 +132,158 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 		ProficiencyChoices:       apiChoicesToChoices(input.ProficiencyChoices),
 		Proficiencies:            apiReferenceItemsToReferenceItems(input.Proficiencies),
 		StartingEquipmentChoices: apiChoicesToChoices(input.StartingEquipmentOptions),
+		StartingEquipment:        apiStartingEquipmentsToStartingEquipments(input.StartingEquipment),
+	}
+}
+
+func apiStartingEquipmentToStartingEquipment(input *apiEntities.StartingEquipment) *entities.StartingEquipment {
+	return &entities.StartingEquipment{
+		Quantity:  input.Quantity,
+		Equipment: apiReferenceItemToReferenceItem(input.Equipment),
+	}
+}
+
+func apiStartingEquipmentsToStartingEquipments(input []*apiEntities.StartingEquipment) []*entities.StartingEquipment {
+	output := make([]*entities.StartingEquipment, len(input))
+	for i, apiStartingEquipment := range input {
+		output[i] = apiStartingEquipmentToStartingEquipment(apiStartingEquipment)
+	}
+
+	return output
+}
+func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.Equipment {
+	if input == nil {
+		return nil
+	}
+
+	switch t := input.(type) {
+	case *apiEntities.Equipment:
+		return apiEquipmentToEquipment(input.(*apiEntities.Equipment))
+	case *apiEntities.Weapon:
+		return apiWeaponToWeapon(input.(*apiEntities.Weapon))
+	case *apiEntities.Armor:
+		return apiArmorToArmor(input.(*apiEntities.Armor))
+	default:
+		log.Println("Unknown equipment type: ", t)
+
+		return nil
+	}
+}
+
+func apiWeaponToWeapon(input *apiEntities.Weapon) *entities.Weapon {
+	return &entities.Weapon{
+		Base: entities.BasicEquipment{
+			Key:    input.Key,
+			Name:   input.Name,
+			Weight: input.Weight,
+			Cost:   apiCostToCost(input.Cost),
+		},
+		WeaponCategory: input.WeaponCategory,
+		WeaponRange:    input.WeaponRange,
+		CategoryRange:  input.CategoryRange,
+		Properties:     apiReferenceItemsToReferenceItems(input.Properties),
+		Damage:         apiDamageToDamage(input.Damage),
+	}
+}
+
+func apiDamageToDamage(input *apiEntities.Damage) *damage.Damage {
+	if input == nil {
+		return nil
+	}
+
+	diceParts := strings.Split(input.DamageDice, "d")
+	if len(diceParts) != 2 {
+		log.Printf("Unknown dice format %s", input.DamageDice)
+		return nil
+	}
+
+	diceCount, err := strconv.Atoi(diceParts[0])
+	if err != nil {
+		log.Printf("Unknown dice format %s", input.DamageDice)
+		return nil
+	}
+
+	diceValue, err := strconv.Atoi(diceParts[1])
+	if err != nil {
+		log.Printf("Unknown dice format %s", input.DamageDice)
+		return nil
+	}
+
+	return &damage.Damage{
+		DiceCount:  diceCount,
+		DiceSize:   diceValue,
+		DamageType: apiDamageTypeToDamageType(input.DamageType),
+	}
+}
+
+func apiDamageTypeToDamageType(input *apiEntities.ReferenceItem) damage.Type {
+	if input == nil {
+		return damage.TypeNone
+	}
+
+	switch input.Key {
+	case "acid":
+		return damage.TypeAcid
+	case "bludgeoning":
+		return damage.TypeBludgeoning
+	case "cold":
+		return damage.TypeCold
+	case "fire":
+		return damage.TypeFire
+	case "force":
+		return damage.TypeForce
+	case "lightning":
+		return damage.TypeLightning
+	case "necrotic":
+		return damage.TypeNecrotic
+	case "piercing":
+		return damage.TypePiercing
+	case "poison":
+		return damage.TypePoison
+	case "psychic":
+		return damage.TypePsychic
+	case "radiant":
+		return damage.TypeRadiant
+	case "slashing":
+		return damage.TypeSlashing
+	case "thunder":
+		return damage.TypeThunder
+	default:
+		log.Printf("Unknown damage type %s", input.Key)
+		return damage.TypeNone
+	}
+}
+
+func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
+	return &entities.Armor{
+		Base: entities.BasicEquipment{
+			Key:    input.Key,
+			Name:   input.Name,
+			Weight: input.Weight,
+			Cost:   apiCostToCost(input.Cost),
+		},
+
+		ArmorClass: &entities.ArmorClass{
+			Base:     input.ArmorClass.Base,
+			DexBonus: input.ArmorClass.DexBonus,
+		},
+		StealthDisadvantage: input.StealthDisadvantage,
+	}
+}
+
+func apiEquipmentToEquipment(input *apiEntities.Equipment) *entities.BasicEquipment {
+	return &entities.BasicEquipment{
+		Key:    input.Key,
+		Name:   input.Name,
+		Weight: input.Weight,
+		Cost:   apiCostToCost(input.Cost),
+	}
+}
+
+func apiCostToCost(input *apiEntities.Cost) *entities.Cost {
+	return &entities.Cost{
+		Quantity: input.Quantity,
+		Unit:     input.Unit,
 	}
 }
 
