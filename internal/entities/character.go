@@ -29,7 +29,7 @@ type Character struct {
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
-	Inventory          map[string][]Equipment
+	Inventory          map[EquipmentType][]Equipment
 
 	HitDie           int
 	AC               int
@@ -47,6 +47,7 @@ type Character struct {
 func (c *Character) Equip(e Equipment) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	defer c.calculateAC()
 
 	if c.EquippedSlots == nil {
 		c.EquippedSlots = make(map[Slot]Equipment)
@@ -54,11 +55,12 @@ func (c *Character) Equip(e Equipment) {
 
 	if e.GetSlot() == SlotTwoHanded {
 		if c.EquippedSlots[SlotMainHand] != nil {
-			c.Unequip(c.EquippedSlots[SlotMainHand])
+			c.EquippedSlots[SlotMainHand] = nil
 		}
 		if c.EquippedSlots[SlotOffHand] != nil {
-			c.Unequip(c.EquippedSlots[SlotOffHand])
+			c.EquippedSlots[SlotOffHand] = nil
 		}
+
 	}
 
 	// if we are trying to equip another main hand we will assign it to the off hand
@@ -69,7 +71,6 @@ func (c *Character) Equip(e Equipment) {
 	}
 
 	c.EquippedSlots[e.GetSlot()] = e
-	c.calculateAC()
 }
 
 func (c *Character) calculateAC() {
@@ -101,17 +102,6 @@ func (c *Character) calculateAC() {
 	}
 }
 
-func (c *Character) Unequip(e Equipment) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.EquippedSlots == nil {
-		c.EquippedSlots = make(map[Slot]Equipment)
-	}
-
-	c.EquippedSlots[e.GetSlot()] = nil
-}
-
 func (c *Character) SetHitpoints() {
 	if c.Attribues == nil {
 		return
@@ -128,6 +118,7 @@ func (c *Character) SetHitpoints() {
 	c.MaxHitPoints = c.HitDie + c.Attribues[AttributeConstitution].Bonus
 	c.CurrentHitPoints = c.MaxHitPoints
 }
+
 func (c *Character) AddAttribute(attr Attribute, score int) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
@@ -182,7 +173,7 @@ func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 
 func (c *Character) AddInventory(e Equipment) {
 	if c.Inventory == nil {
-		c.Inventory = make(map[string][]Equipment)
+		c.Inventory = make(map[EquipmentType][]Equipment)
 	}
 
 	c.mu.Lock()

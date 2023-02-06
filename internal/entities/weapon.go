@@ -15,7 +15,7 @@ type Weapon struct {
 	TwoHandedDamage *damage.Damage   `json:"two_handed_damage"`
 }
 
-func (w *Weapon) GetEquipmentType() string {
+func (w *Weapon) GetEquipmentType() EquipmentType {
 	return "Weapon"
 }
 

@@ -24,7 +24,7 @@ type Armor struct {
 	StealthDisadvantage bool           `json:"stealth_disadvantage"`
 }
 
-func (e *Armor) GetEquipmentType() string {
+func (e *Armor) GetEquipmentType() EquipmentType {
 	return "Armor"
 }
 

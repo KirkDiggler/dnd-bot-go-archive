@@ -1,6 +1,10 @@
 package entities
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+)
 
 func TestCharacter_AddAbilityBonus(t *testing.T) {
 	type fields struct {
@@ -184,4 +188,149 @@ func TestCharacter_AddAttribute(t *testing.T) {
 			}
 		})
 	}
+}
+
+type suiteEquip struct {
+	suite.Suite
+	char *Character
+}
+
+func (s *suiteEquip) SetupTest() {
+	s.char = &Character{
+		Inventory: map[EquipmentType][]Equipment{
+			EquipmentTypeWeapon: {
+				&Weapon{
+					Base: BasicEquipment{
+						Name: "Sword",
+					},
+				},
+			},
+		},
+	}
+	for _, v := range Attributes {
+		s.char.AddAttribute(v, 10)
+	}
+}
+
+func (s *suiteEquip) TestEquip() {
+	s.char.Equip(s.char.Inventory[EquipmentTypeWeapon][0])
+	s.Equal(10, s.char.AC)
+}
+
+func (s *suiteEquip) TestEquipeArmor() {
+	s.char.Equip(&Armor{
+		Base: BasicEquipment{
+			Name: "Leather Armor",
+		},
+		ArmorClass: &ArmorClass{
+			Base:     12,
+			DexBonus: true,
+		},
+	})
+
+	s.Equal(12, s.char.AC)
+
+}
+
+func (s *suiteEquip) TestEquipeArmorWithDexBonus() {
+	s.char.AddAttribute(AttributeDexterity, 14)
+	s.char.Equip(&Armor{
+		Base: BasicEquipment{
+			Name: "Leather Armor",
+		},
+		ArmorClass: &ArmorClass{
+			Base:     12,
+			DexBonus: true,
+		},
+	})
+
+	s.Equal(14, s.char.AC)
+}
+
+func (s *suiteEquip) TestEquipArmorAndShield() {
+	s.char.Equip(&Armor{
+		Base: BasicEquipment{
+			Name: "Leather Armor",
+		},
+		ArmorCategory: ArmorCategoryMedium,
+		ArmorClass: &ArmorClass{
+			Base:     12,
+			DexBonus: true,
+		},
+	})
+
+	s.char.Equip(&Armor{
+		Base: BasicEquipment{
+			Name: "Shield",
+		},
+		ArmorCategory: ArmorCategoryShield,
+		ArmorClass: &ArmorClass{
+			Base: 2,
+		},
+	})
+
+	s.Equal(14, s.char.AC)
+}
+
+func (s *suiteEquip) TestEquipTwoItemsWithShield() {
+	shield := &Armor{
+		Base: BasicEquipment{
+			Name: "shield",
+		},
+		ArmorCategory: ArmorCategoryShield,
+		ArmorClass: &ArmorClass{
+			Base: 2,
+		},
+	}
+	s.char.Equip(shield)
+
+	sword := &Weapon{
+		Base: BasicEquipment{
+			Name: "Sword",
+		},
+	}
+	s.char.Equip(sword)
+
+	s.Equal(12, s.char.AC)
+	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
+	s.Equal(shield, s.char.EquippedSlots[SlotOffHand])
+}
+
+func (s *suiteEquip) TestTwoHandedOverwritesSlots() {
+	shield := &Armor{
+		Base: BasicEquipment{
+			Name: "shield",
+		},
+		ArmorCategory: ArmorCategoryShield,
+		ArmorClass: &ArmorClass{
+			Base: 2,
+		},
+	}
+	s.char.Equip(shield)
+
+	sword := &Weapon{
+		Base: BasicEquipment{
+			Name: "Sword",
+		},
+	}
+	s.char.Equip(sword)
+
+	s.Equal(12, s.char.AC)
+	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
+	s.Equal(shield, s.char.EquippedSlots[SlotOffHand])
+
+	sword.Properties = []*ReferenceItem{{
+		Key:  "two-handed",
+		Name: "Two-Handed",
+	}}
+	s.char.Equip(sword)
+
+	s.Equal(10, s.char.AC)
+	s.Equal(sword, s.char.EquippedSlots[SlotTwoHanded])
+	s.Nil(s.char.EquippedSlots[SlotOffHand])
+	s.Nil(s.char.EquippedSlots[SlotMainHand])
+}
+
+func TestSuiteEquip(t *testing.T) {
+	suite.Run(t, new(suiteEquip))
 }
