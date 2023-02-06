@@ -27,10 +27,27 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	if err != nil {
 		return nil, err
 	}
+	dmgValue := dmgResult.Total
+	attackRoll := attackResult.Total
+	switch attackResult.Total {
+	case 20:
+		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize)
+		if err != nil {
+			return nil, err
+		}
+
+		dmgValue = dmgValue + critDmg.Total
+		attackRoll = attackRoll + attackBonus
+	case 1:
+		attackRoll = 0
+	default:
+		attackRoll = attackRoll + attackBonus
+
+	}
 
 	return &Result{
-		AttackRoll: attackBonus + attackResult.Total,
+		AttackRoll: attackRoll,
 		AttackType: dmg.DamageType,
-		DamageRoll: damageBonus + dmgResult.Total,
+		DamageRoll: damageBonus + dmgValue,
 	}, nil
 }
