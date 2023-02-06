@@ -98,10 +98,9 @@ func (c *Character) calculateAC() {
 				c.AC += c.Attribues[AttributeDexterity].Bonus
 			}
 		}
-
-		c.AC += e.GetAC()
 	}
 }
+
 func (c *Character) Unequip(e Equipment) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
