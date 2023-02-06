@@ -20,6 +20,7 @@ func (c *Character) handleAttack(s *discordgo.Session, i *discordgo.InteractionC
 		log.Println(err)
 		return // TODO handle error
 	}
+
 	msgBuilder := strings.Builder{}
 
 	for _, a := range attack {

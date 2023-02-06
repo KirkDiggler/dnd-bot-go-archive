@@ -52,6 +52,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	if c.EquippedSlots == nil {
 		// Improvised weapon range or melee
+
 		a, err := c.improvisedMelee()
 		if err != nil {
 			return nil, err
@@ -60,6 +61,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 		return []*attack.Result{
 			a,
 		}, nil
+
 	}
 
 	if c.EquippedSlots[SlotMainHand] != nil {

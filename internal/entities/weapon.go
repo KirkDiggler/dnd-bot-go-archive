@@ -21,6 +21,7 @@ func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 	if w.WeaponRange == "Ranged" {
 		bonus = char.Attribues[AttributeDexterity].Bonus
 	} else if w.WeaponRange == "Melee" {
+
 		bonus = char.Attribues[AttributeStrength].Bonus
 	}
 
@@ -62,6 +63,7 @@ func (w *Weapon) hasProperty(prop string) bool {
 
 	return false
 }
+
 func (w *Weapon) GetEquipmentType() EquipmentType {
 	return "Weapon"
 }
