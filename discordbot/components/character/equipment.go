@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/bwmarrin/discordgo"
@@ -67,9 +69,23 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 
 	log.Println("selectedChoice.Options count: ", len(selectedChoice.Options))
 	for idx, choice := range selectedChoice.Options {
+		log.Println("choice: ", choice.GetKey(), " type: ", choice.GetOptionType())
+
 		if choice.GetOptionType() == entities.OptionTypeChoice {
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
+				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
+			}
+		} else if choice.GetOptionType() == entities.OptionTypeMultiple {
+			display := strings.Builder{}
+			if multi, ok := choice.(*entities.MultipleOption); ok {
+				for _, option := range multi.Items {
+					display.WriteString(option.GetName())
+					display.WriteString(" ")
+				}
+			}
+			options[idx] = discordgo.SelectMenuOption{
+				Label: display.String(),
 				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
 			}
 		} else {
@@ -135,6 +151,34 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 					if err != nil {
 						log.Println(err)
 						return // TODO handle error
+					}
+				} else if parts[0] == string(entities.OptionTypeMultiple) {
+					index, err := strconv.Atoi(parts[2])
+					if err != nil {
+						log.Println(err)
+						return // TODO handle error
+					}
+					log.Println("add multiple equipment", parts)
+					if multi, ok := choice.Options[index].(*entities.MultipleOption); ok {
+						g, runCtx := errgroup.WithContext(context.Background())
+
+						for _, option := range multi.Items {
+							option := option
+							g.Go(func() error {
+								char, err = c.charManager.AddInventory(runCtx, char, option.GetKey())
+								if err != nil {
+									log.Println(err)
+									return err
+								}
+								return nil
+							})
+						}
+
+						err := g.Wait()
+						if err != nil {
+							log.Println(err)
+							return // TODO handle error
+						}
 					}
 				} else {
 					log.Println("add equipment", parts)

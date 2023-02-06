@@ -30,7 +30,7 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 
 	var monk *entities.Class
 	for _, class := range classes {
-		if class.Key == "monk" {
+		if class.Key == "fighter" {
 			monk = class
 			break
 		}

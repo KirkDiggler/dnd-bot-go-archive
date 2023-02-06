@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/attack"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
 )
 
@@ -13,6 +14,36 @@ type Weapon struct {
 	CategoryRange   string           `json:"category_range"`
 	Properties      []*ReferenceItem `json:"properties"`
 	TwoHandedDamage *damage.Damage   `json:"two_handed_damage"`
+}
+
+func (e *Weapon) Attack(char *Character) (*attack.Result, error) {
+	var bonus int
+	if e.WeaponRange == "Ranged" {
+		bonus = char.Attribues[AttributeDexterity].Bonus
+	} else if e.WeaponRange == "Melee" {
+		bonus = char.Attribues[AttributeStrength].Bonus
+	}
+
+	// TODO: check proficiency
+	if e.IsTwoHanded() {
+		if e.TwoHandedDamage == nil {
+			return attack.RollAttack(bonus, bonus, e.Damage)
+		}
+
+		return attack.RollAttack(bonus, bonus, e.TwoHandedDamage)
+	}
+
+	return attack.RollAttack(bonus, bonus, e.Damage)
+}
+
+func (e *Weapon) IsTwoHanded() bool {
+	for _, p := range e.Properties {
+		if p.Key == "two-handed" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (w *Weapon) GetEquipmentType() EquipmentType {
