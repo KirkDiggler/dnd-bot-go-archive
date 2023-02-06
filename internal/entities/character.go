@@ -8,6 +8,16 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
 )
 
+type Slot string
+
+const (
+	SlotMainHand  Slot = "main-hand"
+	SlotOffHand   Slot = "off-hand"
+	SlotTwoHanded Slot = "two-handed"
+	SlotBody      Slot = "body"
+	SlotNone      Slot = "none"
+)
+
 type Character struct {
 	ID                 string
 	OwnerID            string
@@ -29,7 +39,77 @@ type Character struct {
 	Experience       int
 	NextLevel        int
 
+	EquippedSlots map[Slot]Equipment
+
 	mu sync.Mutex
+}
+
+func (c *Character) Equip(e Equipment) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.EquippedSlots == nil {
+		c.EquippedSlots = make(map[Slot]Equipment)
+	}
+
+	if e.GetSlot() == SlotTwoHanded {
+		if c.EquippedSlots[SlotMainHand] != nil {
+			c.Unequip(c.EquippedSlots[SlotMainHand])
+		}
+		if c.EquippedSlots[SlotOffHand] != nil {
+			c.Unequip(c.EquippedSlots[SlotOffHand])
+		}
+	}
+
+	// if we are trying to equip another main hand we will assign it to the off hand
+	if e.GetSlot() == SlotMainHand {
+		if c.EquippedSlots[SlotMainHand] != nil {
+			c.EquippedSlots[SlotOffHand] = c.EquippedSlots[SlotMainHand]
+		}
+	}
+
+	c.EquippedSlots[e.GetSlot()] = e
+	c.calculateAC()
+}
+
+func (c *Character) calculateAC() {
+	c.AC = 10
+	for _, e := range c.EquippedSlots {
+		if e == nil {
+			continue
+		}
+
+		if e.GetEquipmentType() == "Armor" {
+			armor := e.(*Armor)
+			if armor.ArmorClass == nil {
+				continue
+			}
+			if e.GetSlot() == SlotBody {
+				c.AC = armor.ArmorClass.Base
+				if armor.ArmorClass.DexBonus {
+					// TODO: load max and bonus and limit id applicable
+					c.AC += c.Attribues[AttributeDexterity].Bonus
+				}
+				continue
+			}
+
+			c.AC += armor.ArmorClass.Base
+			if armor.ArmorClass.DexBonus {
+				c.AC += c.Attribues[AttributeDexterity].Bonus
+			}
+		}
+	}
+}
+
+func (c *Character) Unequip(e Equipment) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.EquippedSlots == nil {
+		c.EquippedSlots = make(map[Slot]Equipment)
+	}
+
+	c.EquippedSlots[e.GetSlot()] = nil
 }
 
 func (c *Character) SetHitpoints() {
