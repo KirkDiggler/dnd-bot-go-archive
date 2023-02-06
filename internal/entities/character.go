@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/attack"
 )
 
 type Slot string
@@ -43,6 +44,48 @@ type Character struct {
 	EquippedSlots map[Slot]Equipment
 
 	mu sync.Mutex
+}
+
+func (c *Character) Attack() (*attack.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.EquippedSlots == nil {
+		// Improvised weapon range or melee
+		return c.improvisedMelee()
+	}
+
+	if c.EquippedSlots[SlotMainHand] != nil {
+		if weap, ok := c.EquippedSlots[SlotMainHand].(*Weapon); ok {
+			return weap.Attack(c)
+		}
+	}
+
+	if c.EquippedSlots[SlotTwoHanded] != nil {
+		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*Weapon); ok {
+			return weap.Attack(c)
+		}
+	}
+
+	return c.improvisedMelee()
+}
+
+func (c *Character) improvisedMelee() (*attack.Result, error) {
+	bonus := c.Attribues[AttributeStrength].Bonus
+	attackRoll, err := dice.Roll(1, 20)
+	if err != nil {
+		return nil, err
+	}
+	damageRoll, err := dice.Roll(1, 4)
+	if err != nil {
+		return nil, err
+	}
+
+	return &attack.Result{
+		AttackRoll: attackRoll.Total + bonus,
+		DamageRoll: damageRoll.Total + bonus,
+		AttackType: "bludgening",
+	}, nil
 }
 
 func (c *Character) getEquipment(key string) Equipment {

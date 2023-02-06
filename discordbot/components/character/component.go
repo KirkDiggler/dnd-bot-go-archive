@@ -80,6 +80,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "equip",
 				Description: "Equip an item from your inventory",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "attack",
+				Description: "Attack a target using your equipped weapon",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -99,6 +103,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleDisplayCharacter(s, i)
 			case "equip":
 				c.handleEquipInventory(s, i)
+			case "attack":
+				c.handleAttack(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
