@@ -244,8 +244,9 @@ func (s *suiteEquip) SetupTest() {
 }
 
 func (s *suiteEquip) TestEquip() {
-	s.char.Equip(s.char.Inventory[EquipmentTypeWeapon][0].GetKey())
+	actual := s.char.Equip(s.char.Inventory[EquipmentTypeWeapon][0].GetKey())
 	s.Equal(10, s.char.AC)
+	s.Equal(true, actual)
 }
 
 func (s *suiteEquip) TestEquipArmor() {

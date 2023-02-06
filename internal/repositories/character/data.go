@@ -3,23 +3,24 @@ package character
 import "github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
 type Data struct {
-	ID               string         `json:"id"`
-	OwnerID          string         `json:"owner_id"`
-	Name             string         `json:"name"`
-	ClassKey         string         `json:"class_key"`
-	RaceKey          string         `json:"race_key"`
-	AC               int            `json:"ac"`
-	Speed            int            `json:"speed"`
-	HitDie           int            `json:"hit_die"`
-	Level            int            `json:"level"`
-	Experience       int            `json:"experience"`
-	MaxHitPoints     int            `json:"max_hit_points"`
-	CurrentHitPoints int            `json:"current_hit_points"`
-	Attributes       *AttributeData `json:"attributes"`
-	NextLevel        int            `json:"next_level"`
-	Rolls            []*RollData    `json:"rolls"`
-	Proficiencies    []*Proficiency `json:"proficiencies"`
-	Inventory        []*Equipment   `json:"inventory"`
+	ID               string                       `json:"id"`
+	OwnerID          string                       `json:"owner_id"`
+	Name             string                       `json:"name"`
+	ClassKey         string                       `json:"class_key"`
+	RaceKey          string                       `json:"race_key"`
+	AC               int                          `json:"ac"`
+	Speed            int                          `json:"speed"`
+	HitDie           int                          `json:"hit_die"`
+	Level            int                          `json:"level"`
+	Experience       int                          `json:"experience"`
+	MaxHitPoints     int                          `json:"max_hit_points"`
+	CurrentHitPoints int                          `json:"current_hit_points"`
+	EquippedSlots    map[entities.Slot]*Equipment `json:"equipped_slots"`
+	Attributes       *AttributeData               `json:"attributes"`
+	NextLevel        int                          `json:"next_level"`
+	Rolls            []*RollData                  `json:"rolls"`
+	Proficiencies    []*Proficiency               `json:"proficiencies"`
+	Inventory        []*Equipment                 `json:"inventory"`
 }
 
 type RollData struct {

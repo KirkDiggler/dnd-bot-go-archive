@@ -17,6 +17,7 @@ import (
 
 const (
 	selectCaracterAction    = "select-character"
+	equipInventoryAction    = "equip-inventory"
 	selectProficiencyAction = "select-proficiency"
 	selectEquipmentAction   = "select-equipment"
 	rollCharacterAction     = "roll-character"
@@ -75,6 +76,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "display",
 				Description: "Display your character",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "equip",
+				Description: "Equip an item from your inventory",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -92,6 +97,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleLoadCharacter(s, i)
 			case "display":
 				c.handleDisplayCharacter(s, i)
+			case "equip":
+				c.handleEquipInventory(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
@@ -129,6 +136,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			c.handleProficiencySelect(s, i)
 		case selectEquipmentAction:
 			c.handleEquipmentSelect(s, i)
+		case equipInventoryAction:
+			c.handleEquipInventorySelect(s, i)
 		}
 	}
 }

@@ -2,6 +2,7 @@ package entities
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -57,14 +58,14 @@ func (c *Character) getEquipment(key string) Equipment {
 }
 
 // Equip equips the item if it is found in the inventory, otherwise it is a noop
-func (c *Character) Equip(key string) {
+func (c *Character) Equip(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	defer c.calculateAC()
 
 	equipment := c.getEquipment(key)
 	if equipment == nil {
-		return
+		return false
 	}
 
 	if c.EquippedSlots == nil {
@@ -89,6 +90,8 @@ func (c *Character) Equip(key string) {
 	}
 
 	c.EquippedSlots[equipment.GetSlot()] = equipment
+
+	return true
 }
 
 func (c *Character) calculateAC() {
@@ -274,9 +277,26 @@ func (c *Character) String() string {
 
 		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
 		for _, item := range c.Inventory[key] {
-			msg.WriteString(fmt.Sprintf("    -  %s\n", item.GetName()))
+			if c.isEquipped(item) {
+				msg.WriteString(fmt.Sprintf("    -  %s (Equipped)\n", item.GetName()))
+				continue
+			}
+
+			msg.WriteString(fmt.Sprintf("    -  %s \n", item.GetName()))
 		}
 
 	}
 	return msg.String()
+}
+
+func (c *Character) isEquipped(e Equipment) bool {
+	for _, item := range c.EquippedSlots {
+		log.Printf("item: %s, e: %s", item.GetKey(), e.GetKey())
+
+		if item.GetKey() == e.GetKey() {
+			return true
+		}
+	}
+
+	return false
 }

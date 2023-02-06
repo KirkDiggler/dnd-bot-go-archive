@@ -7,6 +7,7 @@ const (
 	CreateStepRoll
 	CreateStepProficiency
 	CreateStepEquipment
+	CreateStepEquipCharacter
 	CreateStepDone
 )
 
