@@ -46,28 +46,64 @@ type Character struct {
 	mu sync.Mutex
 }
 
-func (c *Character) Attack() (*attack.Result, error) {
+func (c *Character) Attack() ([]*attack.Result, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.EquippedSlots == nil {
 		// Improvised weapon range or melee
-		return c.improvisedMelee()
+		a, err := c.improvisedMelee()
+		if err != nil {
+			return nil, err
+		}
+
+		return []*attack.Result{
+			a,
+		}, nil
 	}
 
 	if c.EquippedSlots[SlotMainHand] != nil {
 		if weap, ok := c.EquippedSlots[SlotMainHand].(*Weapon); ok {
-			return weap.Attack(c)
+			attacks := make([]*attack.Result, 0)
+			attak1, err := weap.Attack(c)
+			if err != nil {
+				return nil, err
+			}
+			attacks = append(attacks, attak1)
+
+			if offWeap, offOk := c.EquippedSlots[SlotOffHand].(*Weapon); offOk {
+				attak2, err := offWeap.Attack(c)
+				if err != nil {
+					return nil, err
+				}
+				attacks = append(attacks, attak2)
+			}
+
+			return attacks, nil
 		}
 	}
 
 	if c.EquippedSlots[SlotTwoHanded] != nil {
 		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*Weapon); ok {
-			return weap.Attack(c)
+			a, err := weap.Attack(c)
+			if err != nil {
+				return nil, err
+			}
+
+			return []*attack.Result{
+				a,
+			}, nil
 		}
 	}
 
-	return c.improvisedMelee()
+	a, err := c.improvisedMelee()
+	if err != nil {
+		return nil, err
+	}
+
+	return []*attack.Result{
+		a,
+	}, nil
 }
 
 func (c *Character) improvisedMelee() (*attack.Result, error) {
@@ -115,21 +151,16 @@ func (c *Character) Equip(key string) bool {
 		c.EquippedSlots = make(map[Slot]Equipment)
 	}
 
-	if equipment.GetSlot() == SlotTwoHanded {
-		if c.EquippedSlots[SlotMainHand] != nil {
-			c.EquippedSlots[SlotMainHand] = nil
-		}
-		if c.EquippedSlots[SlotOffHand] != nil {
-			c.EquippedSlots[SlotOffHand] = nil
-		}
+	c.EquippedSlots[SlotTwoHanded] = nil
 
-	}
-
-	// if we are trying to equip another main hand we will assign it to the off hand
-	if equipment.GetSlot() == SlotMainHand {
+	switch equipment.GetSlot() {
+	case SlotMainHand:
 		if c.EquippedSlots[SlotMainHand] != nil {
 			c.EquippedSlots[SlotOffHand] = c.EquippedSlots[SlotMainHand]
 		}
+	case SlotTwoHanded:
+		c.EquippedSlots[SlotMainHand] = nil
+		c.EquippedSlots[SlotOffHand] = nil
 	}
 
 	c.EquippedSlots[equipment.GetSlot()] = equipment
@@ -334,6 +365,9 @@ func (c *Character) String() string {
 
 func (c *Character) isEquipped(e Equipment) bool {
 	for _, item := range c.EquippedSlots {
+		if item == nil {
+			continue
+		}
 		log.Printf("item: %s, e: %s", item.GetKey(), e.GetKey())
 
 		if item.GetKey() == e.GetKey() {

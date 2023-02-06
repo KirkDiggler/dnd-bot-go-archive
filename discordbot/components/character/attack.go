@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -19,11 +20,16 @@ func (c *Character) handleAttack(s *discordgo.Session, i *discordgo.InteractionC
 		log.Println(err)
 		return // TODO handle error
 	}
-	
+	msgBuilder := strings.Builder{}
+
+	for _, a := range attack {
+		msgBuilder.WriteString(a.String())
+		msgBuilder.WriteString("\n")
+	}
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Your attack: %s", attack),
+			Content: msgBuilder.String(),
 		},
 	}
 
