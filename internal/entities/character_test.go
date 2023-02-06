@@ -201,8 +201,39 @@ func (s *suiteEquip) SetupTest() {
 			EquipmentTypeWeapon: {
 				&Weapon{
 					Base: BasicEquipment{
+						Key:  "sword",
 						Name: "Sword",
 					},
+				},
+				&Weapon{
+					Base: BasicEquipment{
+						Key:  "greatsword",
+						Name: "Greatsword",
+					},
+					Properties: []*ReferenceItem{{
+						Key:  "two-handed",
+						Name: "Two-Handed",
+					}},
+				},
+			},
+			EquipmentTypeArmor: {
+				&Armor{
+					Base: BasicEquipment{
+						Key:  "leather-armor",
+						Name: "Leather Armor",
+					},
+					ArmorClass: &ArmorClass{
+						Base:     12,
+						DexBonus: true,
+					},
+				},
+				&Armor{
+					Base: BasicEquipment{
+						Key:  "shield",
+						Name: "Shield",
+					},
+					ArmorCategory: ArmorCategoryShield,
+					ArmorClass:    &ArmorClass{Base: 2},
 				},
 			},
 		},
@@ -213,83 +244,38 @@ func (s *suiteEquip) SetupTest() {
 }
 
 func (s *suiteEquip) TestEquip() {
-	s.char.Equip(s.char.Inventory[EquipmentTypeWeapon][0])
+	s.char.Equip(s.char.Inventory[EquipmentTypeWeapon][0].GetKey())
 	s.Equal(10, s.char.AC)
 }
 
-func (s *suiteEquip) TestEquipeArmor() {
-	s.char.Equip(&Armor{
-		Base: BasicEquipment{
-			Name: "Leather Armor",
-		},
-		ArmorClass: &ArmorClass{
-			Base:     12,
-			DexBonus: true,
-		},
-	})
+func (s *suiteEquip) TestEquipArmor() {
+	s.char.Equip("leather-armor")
 
 	s.Equal(12, s.char.AC)
 
 }
 
-func (s *suiteEquip) TestEquipeArmorWithDexBonus() {
+func (s *suiteEquip) TestEquipArmorWithDexBonus() {
 	s.char.AddAttribute(AttributeDexterity, 14)
-	s.char.Equip(&Armor{
-		Base: BasicEquipment{
-			Name: "Leather Armor",
-		},
-		ArmorClass: &ArmorClass{
-			Base:     12,
-			DexBonus: true,
-		},
-	})
+	s.char.Equip("leather-armor")
 
 	s.Equal(14, s.char.AC)
 }
 
 func (s *suiteEquip) TestEquipArmorAndShield() {
-	s.char.Equip(&Armor{
-		Base: BasicEquipment{
-			Name: "Leather Armor",
-		},
-		ArmorCategory: ArmorCategoryMedium,
-		ArmorClass: &ArmorClass{
-			Base:     12,
-			DexBonus: true,
-		},
-	})
+	s.char.Equip("leather-armor")
 
-	s.char.Equip(&Armor{
-		Base: BasicEquipment{
-			Name: "Shield",
-		},
-		ArmorCategory: ArmorCategoryShield,
-		ArmorClass: &ArmorClass{
-			Base: 2,
-		},
-	})
+	s.char.Equip("shield")
 
 	s.Equal(14, s.char.AC)
 }
 
 func (s *suiteEquip) TestEquipTwoItemsWithShield() {
-	shield := &Armor{
-		Base: BasicEquipment{
-			Name: "shield",
-		},
-		ArmorCategory: ArmorCategoryShield,
-		ArmorClass: &ArmorClass{
-			Base: 2,
-		},
-	}
-	s.char.Equip(shield)
+	shield := s.char.Inventory[EquipmentTypeArmor][1]
+	sword := s.char.Inventory[EquipmentTypeWeapon][0]
 
-	sword := &Weapon{
-		Base: BasicEquipment{
-			Name: "Sword",
-		},
-	}
-	s.char.Equip(sword)
+	s.char.Equip("shield")
+	s.char.Equip("sword")
 
 	s.Equal(12, s.char.AC)
 	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
@@ -297,36 +283,22 @@ func (s *suiteEquip) TestEquipTwoItemsWithShield() {
 }
 
 func (s *suiteEquip) TestTwoHandedOverwritesSlots() {
-	shield := &Armor{
-		Base: BasicEquipment{
-			Name: "shield",
-		},
-		ArmorCategory: ArmorCategoryShield,
-		ArmorClass: &ArmorClass{
-			Base: 2,
-		},
-	}
-	s.char.Equip(shield)
 
-	sword := &Weapon{
-		Base: BasicEquipment{
-			Name: "Sword",
-		},
-	}
-	s.char.Equip(sword)
+	shield := s.char.Inventory[EquipmentTypeArmor][1]
+	sword := s.char.Inventory[EquipmentTypeWeapon][0]
+	greatsword := s.char.Inventory[EquipmentTypeWeapon][1]
+
+	s.char.Equip("shield")
+	s.char.Equip("sword")
 
 	s.Equal(12, s.char.AC)
 	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
 	s.Equal(shield, s.char.EquippedSlots[SlotOffHand])
 
-	sword.Properties = []*ReferenceItem{{
-		Key:  "two-handed",
-		Name: "Two-Handed",
-	}}
-	s.char.Equip(sword)
+	s.char.Equip("greatsword")
 
 	s.Equal(10, s.char.AC)
-	s.Equal(sword, s.char.EquippedSlots[SlotTwoHanded])
+	s.Equal(greatsword, s.char.EquippedSlots[SlotTwoHanded])
 	s.Nil(s.char.EquippedSlots[SlotOffHand])
 	s.Nil(s.char.EquippedSlots[SlotMainHand])
 }

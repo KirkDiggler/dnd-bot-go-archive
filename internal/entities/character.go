@@ -44,16 +44,34 @@ type Character struct {
 	mu sync.Mutex
 }
 
-func (c *Character) Equip(e Equipment) {
+func (c *Character) getEquipment(key string) Equipment {
+	for _, v := range c.Inventory {
+		for _, eq := range v {
+			if eq.GetKey() == key {
+				return eq
+			}
+		}
+	}
+
+	return nil
+}
+
+// Equip equips the item if it is found in the inventory, otherwise it is a noop
+func (c *Character) Equip(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	defer c.calculateAC()
+
+	equipment := c.getEquipment(key)
+	if equipment == nil {
+		return
+	}
 
 	if c.EquippedSlots == nil {
 		c.EquippedSlots = make(map[Slot]Equipment)
 	}
 
-	if e.GetSlot() == SlotTwoHanded {
+	if equipment.GetSlot() == SlotTwoHanded {
 		if c.EquippedSlots[SlotMainHand] != nil {
 			c.EquippedSlots[SlotMainHand] = nil
 		}
@@ -64,13 +82,13 @@ func (c *Character) Equip(e Equipment) {
 	}
 
 	// if we are trying to equip another main hand we will assign it to the off hand
-	if e.GetSlot() == SlotMainHand {
+	if equipment.GetSlot() == SlotMainHand {
 		if c.EquippedSlots[SlotMainHand] != nil {
 			c.EquippedSlots[SlotOffHand] = c.EquippedSlots[SlotMainHand]
 		}
 	}
 
-	c.EquippedSlots[e.GetSlot()] = e
+	c.EquippedSlots[equipment.GetSlot()] = equipment
 }
 
 func (c *Character) calculateAC() {
