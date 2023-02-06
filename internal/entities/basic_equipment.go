@@ -7,7 +7,7 @@ type BasicEquipment struct {
 	Weight float32 `json:"weight"`
 }
 
-func (e *BasicEquipment) GetEquipmentType() string {
+func (e *BasicEquipment) GetEquipmentType() EquipmentType {
 	return "BasicEquipment"
 }
 

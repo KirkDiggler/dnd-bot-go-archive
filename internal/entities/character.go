@@ -2,6 +2,7 @@ package entities
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -29,7 +30,7 @@ type Character struct {
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
-	Inventory          map[string][]Equipment
+	Inventory          map[EquipmentType][]Equipment
 
 	HitDie           int
 	AC               int
@@ -44,32 +45,53 @@ type Character struct {
 	mu sync.Mutex
 }
 
-func (c *Character) Equip(e Equipment) {
+func (c *Character) getEquipment(key string) Equipment {
+	for _, v := range c.Inventory {
+		for _, eq := range v {
+			if eq.GetKey() == key {
+				return eq
+			}
+		}
+	}
+
+	return nil
+}
+
+// Equip equips the item if it is found in the inventory, otherwise it is a noop
+func (c *Character) Equip(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	defer c.calculateAC()
+
+	equipment := c.getEquipment(key)
+	if equipment == nil {
+		return false
+	}
 
 	if c.EquippedSlots == nil {
 		c.EquippedSlots = make(map[Slot]Equipment)
 	}
 
-	if e.GetSlot() == SlotTwoHanded {
+	if equipment.GetSlot() == SlotTwoHanded {
 		if c.EquippedSlots[SlotMainHand] != nil {
-			c.Unequip(c.EquippedSlots[SlotMainHand])
+			c.EquippedSlots[SlotMainHand] = nil
 		}
 		if c.EquippedSlots[SlotOffHand] != nil {
-			c.Unequip(c.EquippedSlots[SlotOffHand])
+			c.EquippedSlots[SlotOffHand] = nil
 		}
+
 	}
 
 	// if we are trying to equip another main hand we will assign it to the off hand
-	if e.GetSlot() == SlotMainHand {
+	if equipment.GetSlot() == SlotMainHand {
 		if c.EquippedSlots[SlotMainHand] != nil {
 			c.EquippedSlots[SlotOffHand] = c.EquippedSlots[SlotMainHand]
 		}
 	}
 
-	c.EquippedSlots[e.GetSlot()] = e
-	c.calculateAC()
+	c.EquippedSlots[equipment.GetSlot()] = equipment
+
+	return true
 }
 
 func (c *Character) calculateAC() {
@@ -101,17 +123,6 @@ func (c *Character) calculateAC() {
 	}
 }
 
-func (c *Character) Unequip(e Equipment) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.EquippedSlots == nil {
-		c.EquippedSlots = make(map[Slot]Equipment)
-	}
-
-	c.EquippedSlots[e.GetSlot()] = nil
-}
-
 func (c *Character) SetHitpoints() {
 	if c.Attribues == nil {
 		return
@@ -128,6 +139,7 @@ func (c *Character) SetHitpoints() {
 	c.MaxHitPoints = c.HitDie + c.Attribues[AttributeConstitution].Bonus
 	c.CurrentHitPoints = c.MaxHitPoints
 }
+
 func (c *Character) AddAttribute(attr Attribute, score int) {
 	if c.Attribues == nil {
 		c.Attribues = make(map[Attribute]*AbilityScore)
@@ -182,7 +194,7 @@ func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 
 func (c *Character) AddInventory(e Equipment) {
 	if c.Inventory == nil {
-		c.Inventory = make(map[string][]Equipment)
+		c.Inventory = make(map[EquipmentType][]Equipment)
 	}
 
 	c.mu.Lock()
@@ -265,9 +277,26 @@ func (c *Character) String() string {
 
 		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
 		for _, item := range c.Inventory[key] {
-			msg.WriteString(fmt.Sprintf("    -  %s\n", item.GetName()))
+			if c.isEquipped(item) {
+				msg.WriteString(fmt.Sprintf("    -  %s (Equipped)\n", item.GetName()))
+				continue
+			}
+
+			msg.WriteString(fmt.Sprintf("    -  %s \n", item.GetName()))
 		}
 
 	}
 	return msg.String()
+}
+
+func (c *Character) isEquipped(e Equipment) bool {
+	for _, item := range c.EquippedSlots {
+		log.Printf("item: %s, e: %s", item.GetKey(), e.GetKey())
+
+		if item.GetKey() == e.GetKey() {
+			return true
+		}
+	}
+
+	return false
 }

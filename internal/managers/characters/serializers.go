@@ -2,7 +2,6 @@ package characters
 
 import (
 	"context"
-	"log"
 
 	"golang.org/x/sync/errgroup"
 
@@ -75,7 +74,6 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 
 	for _, item := range data.Inventory {
 		item := item
-		log.Println("item", item.Key)
 		g.Go(func() (err error) {
 			equip, err := m.client.GetEquipment(item.Key)
 			if err != nil {
@@ -91,6 +89,10 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 	err = g.Wait()
 	if err != nil {
 		return nil, err
+	}
+
+	for _, slot := range data.EquippedSlots {
+		char.Equip(slot.Key)
 	}
 
 	return char, nil
@@ -171,7 +173,17 @@ func characterToData(input *entities.Character) *character.Data {
 		Rolls:         rollResultsToRollDatas(input.Rolls),
 		Proficiencies: proficienciesToDatas(input.Proficiencies),
 		Inventory:     equipmentsToDatas(input.Inventory),
+		EquippedSlots: equippedSlotsToDatas(input.EquippedSlots),
 	}
+}
+func equippedSlotsToDatas(input map[entities.Slot]entities.Equipment) map[entities.Slot]*character.Equipment {
+	datas := make(map[entities.Slot]*character.Equipment)
+
+	for k, v := range input {
+		datas[k] = equipmentToData(v)
+	}
+
+	return datas
 }
 
 func proficienciesToDatas(input map[entities.ProficiencyType][]*entities.Proficiency) []*character.Proficiency {
@@ -252,7 +264,7 @@ func equipmentToData(input entities.Equipment) *character.Equipment {
 	}
 }
 
-func equipmentsToDatas(input map[string][]entities.Equipment) []*character.Equipment {
+func equipmentsToDatas(input map[entities.EquipmentType][]entities.Equipment) []*character.Equipment {
 	datas := make([]*character.Equipment, 0)
 
 	for _, v := range input {
