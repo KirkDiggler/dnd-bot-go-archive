@@ -26,3 +26,13 @@ func (w *Weapon) GetName() string {
 func (w *Weapon) GetKey() string {
 	return w.Base.Key
 }
+
+func (w *Weapon) GetSlot() Slot {
+	for _, p := range w.Properties {
+		if p.Key == "two-handed" {
+			return SlotTwoHanded
+		}
+	}
+
+	return SlotMainHand
+}

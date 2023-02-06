@@ -18,3 +18,7 @@ func (e *BasicEquipment) GetName() string {
 func (e *BasicEquipment) GetKey() string {
 	return e.Key
 }
+
+func (e *BasicEquipment) GetSlot() Slot {
+	return SlotNone
+}
