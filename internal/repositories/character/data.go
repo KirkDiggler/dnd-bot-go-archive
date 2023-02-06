@@ -1,5 +1,7 @@
 package character
 
+import "github.com/KirkDiggler/dnd-bot-go/internal/entities"
+
 type Data struct {
 	ID               string         `json:"id"`
 	OwnerID          string         `json:"owner_id"`
@@ -49,7 +51,7 @@ type Proficiency struct {
 }
 
 type Equipment struct {
-	Key  string `json:"key"`
-	Name string `json:"name,omitempty"`
-	Type string `json:"type,omitempty"`
+	Key  string                 `json:"key"`
+	Name string                 `json:"name,omitempty"`
+	Type entities.EquipmentType `json:"type,omitempty"`
 }

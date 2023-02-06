@@ -143,7 +143,7 @@ func equipmentToData(input entities.Equipment) *Equipment {
 	}
 }
 
-func equipmentsToDatas(input map[string][]entities.Equipment) []*Equipment {
+func equipmentsToDatas(input map[entities.EquipmentType][]entities.Equipment) []*Equipment {
 	datas := make([]*Equipment, 0)
 
 	for _, v := range input {

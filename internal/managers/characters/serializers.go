@@ -252,7 +252,7 @@ func equipmentToData(input entities.Equipment) *character.Equipment {
 	}
 }
 
-func equipmentsToDatas(input map[string][]entities.Equipment) []*character.Equipment {
+func equipmentsToDatas(input map[entities.EquipmentType][]entities.Equipment) []*character.Equipment {
 	datas := make([]*character.Equipment, 0)
 
 	for _, v := range input {
