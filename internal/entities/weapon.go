@@ -16,29 +16,47 @@ type Weapon struct {
 	TwoHandedDamage *damage.Damage   `json:"two_handed_damage"`
 }
 
-func (e *Weapon) Attack(char *Character) (*attack.Result, error) {
+func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 	var bonus int
-	if e.WeaponRange == "Ranged" {
+	if w.WeaponRange == "Ranged" {
 		bonus = char.Attribues[AttributeDexterity].Bonus
-	} else if e.WeaponRange == "Melee" {
+	} else if w.WeaponRange == "Melee" {
+
 		bonus = char.Attribues[AttributeStrength].Bonus
 	}
 
 	// TODO: check proficiency
-	if e.IsTwoHanded() {
-		if e.TwoHandedDamage == nil {
-			return attack.RollAttack(bonus, bonus, e.Damage)
+	if w.IsTwoHanded() {
+		if w.TwoHandedDamage == nil {
+			return attack.RollAttack(bonus, bonus, w.Damage)
 		}
 
-		return attack.RollAttack(bonus, bonus, e.TwoHandedDamage)
+		return attack.RollAttack(bonus, bonus, w.TwoHandedDamage)
 	}
 
-	return attack.RollAttack(bonus, bonus, e.Damage)
+	return attack.RollAttack(bonus, bonus, w.Damage)
 }
 
-func (e *Weapon) IsTwoHanded() bool {
-	for _, p := range e.Properties {
-		if p.Key == "two-handed" {
+func (w *Weapon) IsRanged() bool {
+	return w.WeaponRange == "Ranged"
+}
+
+func (w *Weapon) IsMelee() bool {
+	return w.WeaponRange == "Melee"
+}
+
+func (w *Weapon) IsSimple() bool {
+	return w.hasProperty("simple")
+
+}
+
+func (w *Weapon) IsTwoHanded() bool {
+	return w.hasProperty("two-handed")
+}
+
+func (w *Weapon) hasProperty(prop string) bool {
+	for _, p := range w.Properties {
+		if p.Key == prop {
 			return true
 		}
 	}
