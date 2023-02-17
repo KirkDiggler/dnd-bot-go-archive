@@ -18,6 +18,11 @@ const (
 	ChoiceStatusSelected ChoiceStatus = "selected"
 )
 
+type SelectOuput struct {
+	Option  Option
+	HasMore bool
+}
+
 type ChoiceType string
 
 const (
@@ -59,8 +64,8 @@ func (o *Choice) SetStatus(status ChoiceStatus) {
 
 // Select selects an option by key
 // sets the current choice to Active if there are remaining opiotns to be chosen, otherwise marks the top level choice as Selected
-func (o *Choice) Select(key string) Option {
-	var selected Option
+func (o *Choice) Select(key string) *SelectOuput {
+	selected := &SelectOuput{}
 	selectedCount := 0
 
 	for _, option := range o.Options {
@@ -70,8 +75,11 @@ func (o *Choice) Select(key string) Option {
 		}
 
 		if option.GetKey() == key {
-			option.SetStatus(ChoiceStatusActive)
-			selected = option
+			option.SetStatus(ChoiceStatusSelected)
+			selected.Option = option
+			selectedCount++
+
+			o.Status = ChoiceStatusActive
 
 			continue
 		}
@@ -79,9 +87,9 @@ func (o *Choice) Select(key string) Option {
 		if option.GetOptionType() == OptionTypeChoice {
 			choiceOption := option.(*Choice)
 			choice := choiceOption.Select(key)
-			if choice != nil {
+			if choice.Option != nil {
 				selected = choice
-				if selected.GetStatus() == ChoiceStatusSelected {
+				if selected.Option.GetStatus() == ChoiceStatusSelected {
 					selectedCount++
 				}
 			}
@@ -90,32 +98,22 @@ func (o *Choice) Select(key string) Option {
 
 		if option.GetOptionType() == OptionTypeMultiple {
 			multipleOption := option.(*MultipleOption)
-			totalCount := 0
-			// Go through all the items and select the one that matches the key
-			// keep track of how many have been selected
-			for _, item := range multipleOption.Items {
-				if item.GetKey() == key {
-					if item.GetStatus() != ChoiceStatusSelected {
-						selected = item
-						item.SetStatus(ChoiceStatusSelected)
-					}
-					totalCount++
+			multiple := multipleOption.Select(key)
+			if multiple.Option != nil {
+				selected = multiple
+				if selected.Option.GetStatus() == ChoiceStatusSelected {
+					selectedCount++
 				}
-			}
-			// If they have all been selected we will mark the top level option as selected
-			if totalCount == o.Count {
-				option.SetStatus(ChoiceStatusSelected)
 			}
 		}
 
 		if option.GetKey() == key {
-			option.SetStatus(ChoiceStatusSelected)
-			selected = option
+			selected.Option = option
 			selectedCount++
 		}
 	}
 
-	if selectedCount == o.Count {
+	if selectedCount == o.Count && !selected.HasMore {
 		o.Status = ChoiceStatusSelected
 	} else if selectedCount > 0 {
 		o.Status = ChoiceStatusActive
@@ -130,12 +128,19 @@ type Option interface {
 	GetKey() string
 	GetStatus() ChoiceStatus
 	SetStatus(ChoiceStatus)
+	Select(key string) *SelectOuput
 }
 
 type CountedReferenceOption struct {
 	Status    ChoiceStatus   `json:"status"`
 	Count     int            `json:"count"`
 	Reference *ReferenceItem `json:"reference"`
+}
+
+func (o *CountedReferenceOption) Select(key string) *SelectOuput {
+	o.Status = ChoiceStatusSelected
+
+	return &SelectOuput{Option: o, HasMore: false}
 }
 
 func (o *CountedReferenceOption) GetOptionType() OptionType {
@@ -161,6 +166,12 @@ func (o *CountedReferenceOption) GetKey() string {
 type ReferenceOption struct {
 	Status    ChoiceStatus   `json:"status"`
 	Reference *ReferenceItem `json:"reference"`
+}
+
+func (o *ReferenceOption) Select(key string) *SelectOuput {
+	o.Status = ChoiceStatusSelected
+
+	return &SelectOuput{Option: o, HasMore: false}
 }
 
 func (o *ReferenceOption) GetOptionType() OptionType {
@@ -190,42 +201,52 @@ type MultipleOption struct {
 	Items  []Option     `json:"items"`
 }
 
-func (o *MultipleOption) Select(key string) Option {
+func (o *MultipleOption) Select(key string) *SelectOuput {
 	totalCount := 0
-	var selected Option
+	selected := &SelectOuput{}
 
 	// Go through all the items and select the one that matches the key
 	// keep track of how many have been selected
-	for _, item := range o.Items {
-		switch item.GetOptionType() {
-		case OptionTypeChoice:
-			choiceOption := item.(*Choice)
-			choice := choiceOption.Select(key)
-			if choice != nil {
-				selected = choice
-				if selected.GetStatus() == ChoiceStatusSelected {
-					totalCount++
+	for idx, item := range o.Items {
+		if item.GetStatus() == ChoiceStatusSelected {
+			totalCount++
+			continue
+		}
+
+		if item.GetKey() == key {
+			totalCount++
+
+			if item.GetStatus() != ChoiceStatusSelected {
+				selected.Option = item
+				item.SetStatus(ChoiceStatusSelected)
+
+				o.Status = ChoiceStatusActive
+
+				if idx < len(o.Items)-1 {
+					selected.HasMore = true
 				}
 
 				break
 			}
-		default:
-			if item.GetKey() == key {
+		}
+
+		current := item.Select(key)
+		if current != nil {
+			selected = current
+			if selected.Option.GetStatus() == ChoiceStatusSelected {
 				totalCount++
-
-				if item.GetStatus() != ChoiceStatusSelected {
-					selected = item
-					item.SetStatus(ChoiceStatusSelected)
-
-					break
-				}
 			}
+
+			o.Status = ChoiceStatusActive
+
+			break
 		}
 	}
 
 	// If they have all been selected we will mark the top level option as selected
 	if totalCount == len(o.Items) {
 		o.Status = ChoiceStatusSelected
+		selected.HasMore = false
 	}
 
 	return selected

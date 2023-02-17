@@ -24,6 +24,7 @@ func (s *suiteChoice) SetupTest() {
 				Items: []Option{
 					&Choice{
 						Name:  "a martial weapon",
+						Key:   "option-1-1",
 						Count: 1,
 						Type:  ChoiceTypeEquipment,
 						Options: []Option{
@@ -52,6 +53,7 @@ func (s *suiteChoice) SetupTest() {
 			},
 			&Choice{
 				Name:  "two martial weapons",
+				Key:   "option-2",
 				Count: 2,
 				Type:  ChoiceTypeEquipment,
 				Options: []Option{
@@ -80,8 +82,25 @@ func (s *suiteChoice) SetupTest() {
 }
 
 func (s *suiteChoice) TestSelectsMultiple() {
-	actual := s.choice.Select("option-1")
-	s.Equal("a martial weapon and a shield", actual.GetName())
+	multi := s.choice.Select("option-1")
+	s.Equal("a martial weapon and a shield", multi.Option.GetName())
+
+	choice := multi.Option.Select("option-1-1")
+	s.Equal("a martial weapon", choice.Option.GetName())
+	s.Equal(ChoiceStatusActive, s.choice.GetStatus())
+
+	s.Equal(ChoiceStatusActive, multi.Option.GetStatus())
+
+	axe := choice.Option.Select("battleaxe")
+	s.Equal("Battleaxe", axe.Option.GetName())
+	s.Equal(ChoiceStatusActive, multi.Option.GetStatus())
+	s.Equal(ChoiceStatusActive, s.choice.GetStatus())
+
+	shield := multi.Option.Select("shield")
+	s.Equal("Shield", shield.Option.GetName())
+
+	s.Equal(ChoiceStatusSelected, multi.Option.GetStatus())
+	s.Equal(ChoiceStatusSelected, s.choice.GetStatus())
 
 }
 
