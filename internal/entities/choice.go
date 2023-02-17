@@ -235,7 +235,7 @@ func (o *MultipleOption) GetOptionType() OptionType {
 }
 
 func (o *MultipleOption) GetName() string {
-	return ""
+	return o.Name
 }
 
 func (o *MultipleOption) GetKey() string {
