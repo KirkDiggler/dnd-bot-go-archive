@@ -100,8 +100,6 @@ func (s *suiteChoice) TestSelectsMultiple() {
 	s.Equal("Shield", shield.Option.GetName())
 
 	s.Equal(ChoiceStatusSelected, multi.Option.GetStatus())
-	s.Equal(ChoiceStatusSelected, s.choice.GetStatus())
-
 }
 
 func TestChoice(t *testing.T) {

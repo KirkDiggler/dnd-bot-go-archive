@@ -75,13 +75,19 @@ func (o *Choice) Select(key string) *SelectOuput {
 		}
 
 		if option.GetKey() == key {
-			option.SetStatus(ChoiceStatusSelected)
-			selected.Option = option
+			switch option.GetOptionType() {
+			case OptionTypeReference, OptionTypeCountedReference:
+				option.SetStatus(ChoiceStatusSelected)
+				selected.Option = option
+			case OptionTypeChoice, OptionTypeMultiple:
+				option.SetStatus(ChoiceStatusActive)
+				selected.Option = option
+				selected.HasMore = true
+			}
+
 			selectedCount++
 
-			o.Status = ChoiceStatusActive
-
-			continue
+			break
 		}
 
 		if option.GetOptionType() == OptionTypeChoice {
@@ -109,6 +115,7 @@ func (o *Choice) Select(key string) *SelectOuput {
 
 		if option.GetKey() == key {
 			selected.Option = option
+
 			selectedCount++
 		}
 	}
