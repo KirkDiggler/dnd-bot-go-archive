@@ -40,7 +40,7 @@ func (r *redisRepo) GetParty(ctx context.Context, token string) (*entities.Party
 		return nil, dnderr.NewMissingParameterError("token")
 	}
 
-	result := r.client.Get(ctx, token)
+	result := r.client.Get(ctx, getPartyKey(token))
 	if result.Err() != nil {
 		if result.Err() == redis.Nil {
 			return nil, dnderr.NewNotFoundError(fmt.Sprintf("token: %s not found", token))
