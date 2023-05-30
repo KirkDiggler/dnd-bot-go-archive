@@ -121,7 +121,7 @@ func (r *Redis) UpdateRoom(ctx context.Context, room *entities.Room) (*entities.
 	}
 
 	// TODO: verify room exists
-	
+
 	err = r.client.Set(ctx, getRoomKey(room.ID), jsonStr, 0).Err()
 	if err != nil {
 		return nil, err
