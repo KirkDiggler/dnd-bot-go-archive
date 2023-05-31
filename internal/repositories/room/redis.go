@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
-	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/go-redis/redis/v9"
 )
@@ -41,7 +40,7 @@ func getRoomKey(id string) string {
 	return "room:" + id
 }
 
-func roomToJson(room *entities.Room) (string, error) {
+func roomToJson(room *Data) (string, error) {
 	if room == nil {
 		return "", dnderr.NewMissingParameterError("room")
 	}
@@ -54,12 +53,12 @@ func roomToJson(room *entities.Room) (string, error) {
 	return string(buf), nil
 }
 
-func jsonToRoom(jsonStr string) (*entities.Room, error) {
+func jsonToRoom(jsonStr string) (*Data, error) {
 	if jsonStr == "" {
 		return nil, dnderr.NewMissingParameterError("jsonStr")
 	}
 
-	var room entities.Room
+	var room Data
 	err := json.Unmarshal([]byte(jsonStr), &room)
 	if err != nil {
 		return nil, err
@@ -69,7 +68,7 @@ func jsonToRoom(jsonStr string) (*entities.Room, error) {
 }
 
 // CreateRoom creates a room and assigns it to the oweners index
-func (r *Redis) CreateRoom(ctx context.Context, room *entities.Room) (*entities.Room, error) {
+func (r *Redis) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
 	if room == nil {
 		return nil, dnderr.NewMissingParameterError("room")
 	}
@@ -106,7 +105,7 @@ func (r *Redis) CreateRoom(ctx context.Context, room *entities.Room) (*entities.
 	return room, nil
 }
 
-func (r *Redis) UpdateRoom(ctx context.Context, room *entities.Room) (*entities.Room, error) {
+func (r *Redis) UpdateRoom(ctx context.Context, room *Data) (*Data, error) {
 	if room == nil {
 		return nil, dnderr.NewMissingParameterError("room")
 	}
@@ -130,7 +129,7 @@ func (r *Redis) UpdateRoom(ctx context.Context, room *entities.Room) (*entities.
 	return room, nil
 }
 
-func (r *Redis) GetRoom(ctx context.Context, id string) (*entities.Room, error) {
+func (r *Redis) GetRoom(ctx context.Context, id string) (*Data, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
@@ -147,7 +146,7 @@ func (r *Redis) GetRoom(ctx context.Context, id string) (*entities.Room, error) 
 	return jsonToRoom(result.Val())
 }
 
-func (r *Redis) ListRooms(ctx context.Context, owner string) ([]*entities.Room, error) {
+func (r *Redis) ListRooms(ctx context.Context, owner string) ([]*Data, error) {
 	if owner == "" {
 		return nil, dnderr.NewMissingParameterError("owner")
 	}
@@ -157,7 +156,7 @@ func (r *Redis) ListRooms(ctx context.Context, owner string) ([]*entities.Room, 
 		return nil, err
 	}
 
-	rooms := make([]*entities.Room, len(roomKeys))
+	rooms := make([]*Data, len(roomKeys))
 	for i, roomKey := range roomKeys {
 		room, err := r.GetRoom(ctx, roomKey)
 		if err != nil {
