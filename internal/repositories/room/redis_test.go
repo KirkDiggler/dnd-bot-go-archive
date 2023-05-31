@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
-	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/go-redis/redis/v9"
 	"github.com/go-redis/redismock/v9"
@@ -21,7 +20,7 @@ type roomSuite struct {
 	mockUuider *types.MockUUID
 	fixture    *Redis
 
-	room     *entities.Room
+	room     *Data
 	roomJson string
 }
 
@@ -35,9 +34,9 @@ func (s *roomSuite) SetupTest() {
 		client: client,
 		uuider: s.mockUuider,
 	}
-	s.room = &entities.Room{
+	s.room = &Data{
 		ID:          "1234",
-		Status:      entities.RoomStatusActive,
+		Status:      RoomStatusActive,
 		MonsterID:   "1234",
 		CharacterID: "1337",
 	}
@@ -52,7 +51,7 @@ func (s *roomSuite) TestCreaeRoom_ValidateInput() {
 	s.Error(err)
 	s.EqualError(err, dnderr.NewMissingParameterError("room").Error())
 
-	_, err = s.fixture.CreateRoom(s.ctx, &entities.Room{ID: "1234"})
+	_, err = s.fixture.CreateRoom(s.ctx, &Data{ID: "1234"})
 	s.Error(err)
 	s.EqualError(err, dnderr.NewInvalidEntityError("room.ID must be empty").Error())
 }
@@ -62,8 +61,8 @@ func (s *roomSuite) TestCreateRoom_RedisError() {
 
 	s.redisMock.ExpectZCard(characterRoomKey(s.room.CharacterID)).SetErr(errors.New("redis error"))
 
-	input := &entities.Room{
-		Status:      entities.RoomStatusActive,
+	input := &Data{
+		Status:      RoomStatusActive,
 		MonsterID:   s.room.MonsterID,
 		CharacterID: s.room.CharacterID,
 	}
@@ -88,8 +87,8 @@ func (s *roomSuite) TestCreateRoom() {
 
 	s.redisMock.ExpectTxPipelineExec()
 
-	input := &entities.Room{
-		Status:      entities.RoomStatusActive,
+	input := &Data{
+		Status:      RoomStatusActive,
 		MonsterID:   s.room.MonsterID,
 		CharacterID: s.room.CharacterID,
 	}
