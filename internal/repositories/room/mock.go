@@ -9,7 +9,7 @@ type Mock struct {
 	mock.Mock
 }
 
-func (m *Mock) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
+func (m *Mock) Create(ctx context.Context, room *Data) (*Data, error) {
 	args := m.Called(ctx, room)
 
 	if args.Error(1) != nil {
@@ -19,7 +19,7 @@ func (m *Mock) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
 	return args.Get(0).(*Data), args.Error(1)
 }
 
-func (m *Mock) GetRoom(ctx context.Context, id string) (*Data, error) {
+func (m *Mock) Get(ctx context.Context, id string) (*Data, error) {
 	args := m.Called(ctx, id)
 
 	if args.Error(1) != nil {
@@ -29,7 +29,7 @@ func (m *Mock) GetRoom(ctx context.Context, id string) (*Data, error) {
 	return args.Get(0).(*Data), args.Error(1)
 }
 
-func (m *Mock) UpdateRoom(ctx context.Context, room *Data) (*Data, error) {
+func (m *Mock) Update(ctx context.Context, room *Data) (*Data, error) {
 	args := m.Called(ctx, room)
 
 	if args.Error(1) != nil {
@@ -39,8 +39,8 @@ func (m *Mock) UpdateRoom(ctx context.Context, room *Data) (*Data, error) {
 	return args.Get(0).(*Data), args.Error(1)
 }
 
-func (m *Mock) ListRooms(ctx context.Context, owner string) ([]*Data, error) {
-	args := m.Called(ctx, owner)
+func (m *Mock) ListByPlayer(ctx context.Context, input *ListByPlayerInput) ([]*Data, error) {
+	args := m.Called(ctx, input)
 
 	if args.Error(1) != nil {
 		return nil, args.Error(1)

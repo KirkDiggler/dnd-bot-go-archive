@@ -8,9 +8,11 @@ import (
 )
 
 type Result struct {
-	AttackRoll int
-	AttackType damage.Type
-	DamageRoll int
+	AttackRoll   int
+	AttackType   damage.Type
+	DamageRoll   int
+	AttackResult *dice.RollResult
+	DamageResult *dice.RollResult
 }
 
 func (r *Result) String() string {
@@ -18,12 +20,12 @@ func (r *Result) String() string {
 }
 
 func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, error) {
-	attackResult, err := dice.Roll(1, 20)
+	attackResult, err := dice.Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	dmgResult, err := dice.Roll(dmg.DiceCount, dmg.DiceSize)
+	dmgResult, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +33,7 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	attackRoll := attackResult.Total
 	switch attackResult.Total {
 	case 20:
-		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize)
+		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -46,8 +48,10 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	}
 
 	return &Result{
-		AttackRoll: attackRoll,
-		AttackType: dmg.DamageType,
-		DamageRoll: damageBonus + dmgValue,
+		AttackRoll:   attackRoll,
+		AttackType:   dmg.DamageType,
+		DamageRoll:   damageBonus + dmgValue,
+		AttackResult: attackResult,
+		DamageResult: dmgResult,
 	}, nil
 }

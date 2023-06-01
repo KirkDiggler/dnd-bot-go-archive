@@ -67,8 +67,8 @@ func jsonToRoom(jsonStr string) (*Data, error) {
 	return &room, nil
 }
 
-// CreateRoom creates a room and assigns it to the oweners index
-func (r *Redis) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
+// Create creates a room and assigns it to the owners index
+func (r *Redis) Create(ctx context.Context, room *Data) (*Data, error) {
 	if room == nil {
 		return nil, dnderr.NewMissingParameterError("room")
 	}
@@ -84,7 +84,7 @@ func (r *Redis) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
 		return nil, err
 	}
 
-	roomCount, err := r.client.ZCard(ctx, characterRoomKey(room.CharacterID)).Result()
+	roomCount, err := r.client.ZCard(ctx, characterRoomKey(room.PlayerID)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (r *Redis) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
 	// Use pipe to set the room data and add member to character rooms index
 	pipe := r.client.TxPipeline()
 	pipe.Set(ctx, getRoomKey(room.ID), jsonStr, 0)
-	pipe.ZAdd(ctx, characterRoomKey(room.CharacterID), redis.Z{
+	pipe.ZAdd(ctx, characterRoomKey(room.PlayerID), redis.Z{
 		Score:  float64(roomCount),
 		Member: getRoomKey(room.ID),
 	})
@@ -105,7 +105,7 @@ func (r *Redis) CreateRoom(ctx context.Context, room *Data) (*Data, error) {
 	return room, nil
 }
 
-func (r *Redis) UpdateRoom(ctx context.Context, room *Data) (*Data, error) {
+func (r *Redis) Update(ctx context.Context, room *Data) (*Data, error) {
 	if room == nil {
 		return nil, dnderr.NewMissingParameterError("room")
 	}
@@ -129,7 +129,7 @@ func (r *Redis) UpdateRoom(ctx context.Context, room *Data) (*Data, error) {
 	return room, nil
 }
 
-func (r *Redis) GetRoom(ctx context.Context, id string) (*Data, error) {
+func (r *Redis) Get(ctx context.Context, id string) (*Data, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
@@ -146,19 +146,40 @@ func (r *Redis) GetRoom(ctx context.Context, id string) (*Data, error) {
 	return jsonToRoom(result.Val())
 }
 
-func (r *Redis) ListRooms(ctx context.Context, owner string) ([]*Data, error) {
-	if owner == "" {
-		return nil, dnderr.NewMissingParameterError("owner")
+func (r *Redis) ListByPlayer(ctx context.Context, input *ListByPlayerInput) ([]*Data, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	roomKeys, err := r.client.ZRevRange(ctx, characterRoomKey(owner), 0, 10).Result()
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+
+	if input.Limit == 0 {
+		input.Limit = 10
+	}
+
+	var roomKeys []string
+	var err error
+
+	var start, stop int64
+
+	start = input.Offset
+	stop = input.Offset + input.Limit - 1
+
+	if input.Reverse {
+		roomKeys, err = r.client.ZRevRange(ctx, characterRoomKey(input.PlayerID), start, stop).Result()
+	} else {
+		roomKeys, err = r.client.ZRange(ctx, characterRoomKey(input.PlayerID), start, stop).Result()
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	rooms := make([]*Data, len(roomKeys))
 	for i, roomKey := range roomKeys {
-		room, err := r.GetRoom(ctx, roomKey)
+		room, err := r.Get(ctx, roomKey)
 		if err != nil {
 			return nil, err
 		}

@@ -68,3 +68,13 @@ func (m *Mock) GetEquipment(key string) (entities.Equipment, error) {
 
 	return args.Get(0).(entities.Equipment), nil
 }
+
+func (m *Mock) GetMonster(key string) (*entities.MonsterTemplate, error) {
+	args := m.Called(key)
+
+	if args.Error(1) != nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).(*entities.MonsterTemplate), nil
+}

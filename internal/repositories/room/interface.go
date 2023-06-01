@@ -5,8 +5,8 @@ import (
 )
 
 type Repository interface {
-	CreateRoom(ctx context.Context, room *Data) (*Data, error)
-	UpdateRoom(ctx context.Context, room *Data) (*Data, error)
-	GetRoom(ctx context.Context, id string) (*Data, error)
-	ListRooms(ctx context.Context, owner string) ([]*Data, error)
+	Create(ctx context.Context, room *Data) (*Data, error)
+	Update(ctx context.Context, room *Data) (*Data, error)
+	Get(ctx context.Context, id string) (*Data, error)
+	ListByPlayer(ctx context.Context, input *ListByPlayerInput) ([]*Data, error)
 }
