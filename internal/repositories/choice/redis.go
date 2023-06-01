@@ -45,7 +45,7 @@ func (r *redisRepo) Get(ctx context.Context, input *GetInput) (*GetOutput, error
 	}
 
 	if input.CharacterID == "" {
-		return nil, dnderr.NewMissingParameterError("input.CharacterID")
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
 	if input.Type == "" {
@@ -76,7 +76,7 @@ func (r *redisRepo) Put(ctx context.Context, input *PutInput) error {
 	}
 
 	if input.CharacterID == "" {
-		return dnderr.NewMissingParameterError("input.CharacterID")
+		return dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
 	if input.Type == "" {
