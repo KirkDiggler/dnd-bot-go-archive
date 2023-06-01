@@ -2,29 +2,29 @@ package room
 
 import "github.com/KirkDiggler/dnd-bot-go/internal/entities"
 
-type RoomStatus string
+type Status string
 
 const (
-	RoomStatusUnset    RoomStatus = ""
-	RoomStatusActive   RoomStatus = "active"
-	RoomStatusInactive RoomStatus = "inactive"
+	StatusUnset    Status = ""
+	StatusActive   Status = "active"
+	StatusInactive Status = "inactive"
 )
 
 type Data struct {
-	ID          string     `json:"id"`
-	Status      RoomStatus `json:"status"`
-	CharacterID string     `json:"character_id"`
-	MonsterID   string     `json:"monster_id"`
+	ID        string `json:"id"`
+	Status    Status `json:"status"`
+	PlayerID  string `json:"player_id"`
+	MonsterID string `json:"monster_id"`
 }
 
-func EntityToRoomStatus(input entities.RoomStatus) RoomStatus {
+func EntityToRoomStatus(input entities.RoomStatus) Status {
 	switch input {
 	case entities.RoomStatusActive:
-		return RoomStatusActive
+		return StatusActive
 	case entities.RoomStatusInactive:
-		return RoomStatusInactive
+		return StatusInactive
 	default:
-		return RoomStatusUnset
+		return StatusUnset
 	}
 }
 
@@ -41,11 +41,11 @@ func EntityToData(input *entities.Room) *Data {
 	if input.Monster != nil {
 		monsterID = input.Monster.ID
 	}
-	
+
 	return &Data{
-		ID:          input.ID,
-		Status:      EntityToRoomStatus(input.Status),
-		CharacterID: charID,
-		MonsterID:   monsterID,
+		ID:        input.ID,
+		Status:    EntityToRoomStatus(input.Status),
+		PlayerID:  charID,
+		MonsterID: monsterID,
 	}
 }

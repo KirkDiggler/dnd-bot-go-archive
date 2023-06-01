@@ -15,9 +15,10 @@ type RollResult struct {
 	Highest int
 	Lowest  int
 	Rolls   []int
+	Bonus   int
 }
 
-func Roll(count, size int) (*RollResult, error) {
+func Roll(count, size, bonus int) (*RollResult, error) {
 	if count < 1 {
 		return nil, errors.New("invalid dice count")
 	}
@@ -50,15 +51,25 @@ func Roll(count, size int) (*RollResult, error) {
 
 	log.Println("Rolling", count, "d", size, ":", out, "total:", total, "min:", min, "max:", max)
 	return &RollResult{
-		Total:   total,
+		Total:   total + bonus,
 		Highest: max,
 		Lowest:  min,
 		Rolls:   out,
+		Bonus:   bonus,
 	}, nil
 }
 
 func RollString(diceString string) (*RollResult, error) {
-	diceParts := strings.Split(diceString, "d")
+	a := strings.Split(diceString, "+")
+	var dice = diceString
+	var bonus, diceSize, diceCount int
+	var err error
+	if len(a) == 2 {
+		bonus, _ = strconv.Atoi(a[1])
+		dice = a[0]
+	}
+
+	diceParts := strings.Split(dice, "d")
 	if len(diceParts) != 2 {
 		return nil, errors.New("invalid dice string")
 	}
@@ -66,16 +77,16 @@ func RollString(diceString string) (*RollResult, error) {
 	strCount := diceParts[0]
 	strSize := diceParts[1]
 
-	count, err := strconv.Atoi(strCount)
+	diceCount, err = strconv.Atoi(strCount)
 	if err != nil {
 		return nil, errors.New("invalid dice string")
 	}
-	size, err := strconv.Atoi(strSize)
+	diceSize, err = strconv.Atoi(strSize)
 	if err != nil {
 		return nil, errors.New("invalid dice string")
 	}
 
-	return Roll(count, size)
+	return Roll(diceCount, diceSize, bonus)
 }
 
 func (r *RollResult) String() string {

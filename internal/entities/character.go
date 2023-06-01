@@ -110,11 +110,11 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 func (c *Character) improvisedMelee() (*attack.Result, error) {
 	bonus := c.Attribues[AttributeStrength].Bonus
-	attackRoll, err := dice.Roll(1, 20)
+	attackRoll, err := dice.Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
 	}
-	damageRoll, err := dice.Roll(1, 4)
+	damageRoll, err := dice.Roll(1, 4, 0)
 	if err != nil {
 		return nil, err
 	}
