@@ -162,3 +162,31 @@ func (r *Redis) Get(ctx context.Context, id string) (*Data, error) {
 
 	return encounter, nil
 }
+
+func (r *Redis) ListByPlayer(ctx context.Context, playerID string) ([]*Data, error) {
+	if playerID == "" {
+		return nil, dnderr.NewMissingParameterError("playerID")
+	}
+
+	encounterKeys, err := r.client.ZRevRange(ctx, characterEncounterKey(playerID), 0, 10).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var encounters []*Data
+	for _, encounterKey := range encounterKeys {
+		jsonStr, err := r.client.Get(ctx, encounterKey).Result()
+		if err != nil {
+			return nil, err
+		}
+
+		encounter, err := jsonToEncounter(jsonStr)
+		if err != nil {
+			return nil, err
+		}
+
+		encounters = append(encounters, encounter)
+	}
+
+	return encounters, nil
+}

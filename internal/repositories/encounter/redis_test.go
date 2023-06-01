@@ -156,3 +156,16 @@ func (s *encounterSuite) TestUpdate() {
 	err := s.fixture.Update(s.ctx, s.encounter)
 	s.NoError(err)
 }
+
+func (s *encounterSuite) TestListByPlayer() {
+	s.redisMock.ExpectZRevRange(characterEncounterKey(s.encounter.PlayerID), 0, 10).SetVal([]string{
+		getEncounterKey(s.encounter.ID),
+	})
+
+	s.redisMock.ExpectGet(getEncounterKey(s.encounter.ID)).SetVal(s.jsonEncounter)
+
+	result, err := s.fixture.ListByPlayer(s.ctx, s.encounter.PlayerID)
+	s.NoError(err)
+	s.NotNil(result)
+	s.Equal([]*Data{s.encounter}, result)
+}
