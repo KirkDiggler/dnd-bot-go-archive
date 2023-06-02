@@ -22,18 +22,22 @@ func (m *Monster) Attack() ([]*attack.Result, error) {
 		return []*attack.Result{}, nil
 	}
 
-	randRoll := rand.Intn(len(m.Template.Actions) - 1)
+	var randRoll int
+	if len(m.Template.Actions) > 1 {
+		randRoll = rand.Intn(len(m.Template.Actions) - 1)
+	}
+
 	action := m.Template.Actions[randRoll]
 
 	results := make([]*attack.Result, 0, len(action.Damage))
 	for _, dmg := range action.Damage {
-		attackResult, err := attack.RollAttack(action.AttackBonus, 0, dmg)
+		attackResult, err := attack.RollAttack(action.AttackBonus, dmg)
 		if err != nil {
 			return nil, err
 		}
 		results = append(results, attackResult)
 	}
-	
+
 	return results, nil
 }
 

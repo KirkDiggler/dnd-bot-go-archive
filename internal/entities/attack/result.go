@@ -19,13 +19,13 @@ func (r *Result) String() string {
 	return fmt.Sprintf("attack: %d, type: %s, damage: %d", r.AttackRoll, r.AttackType, r.DamageRoll)
 }
 
-func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, error) {
-	attackResult, err := dice.Roll(1, 20, 0)
+func RollAttack(attackBonus int, dmg *damage.Damage) (*Result, error) {
+	attackResult, err := dice.Roll(1, 20, attackBonus)
 	if err != nil {
 		return nil, err
 	}
 
-	dmgResult, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+	dmgResult, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
 	if err != nil {
 		return nil, err
 	}
@@ -33,24 +33,20 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	attackRoll := attackResult.Total
 	switch attackResult.Total {
 	case 20:
-		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
 		if err != nil {
 			return nil, err
 		}
 
 		dmgValue = dmgValue + critDmg.Total
-		attackRoll = attackRoll + attackBonus
 	case 1:
 		attackRoll = 0
-	default:
-		attackRoll = attackRoll + attackBonus
-
 	}
 
 	return &Result{
 		AttackRoll:   attackRoll,
 		AttackType:   dmg.DamageType,
-		DamageRoll:   damageBonus + dmgValue,
+		DamageRoll:   dmgValue,
 		AttackResult: attackResult,
 		DamageResult: dmgResult,
 	}, nil

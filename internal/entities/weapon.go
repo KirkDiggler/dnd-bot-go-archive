@@ -28,13 +28,16 @@ func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 	// TODO: check proficiency
 	if w.IsTwoHanded() {
 		if w.TwoHandedDamage == nil {
-			return attack.RollAttack(damageBonus, damageBonus, w.Damage)
+			w.Damage.Bonus = damageBonus
+			return attack.RollAttack(attackBonus, w.Damage)
 		}
 
-		return attack.RollAttack(attackBonus, damageBonus, w.TwoHandedDamage)
+		w.TwoHandedDamage.Bonus = damageBonus
+		return attack.RollAttack(attackBonus, w.TwoHandedDamage)
 	}
 
-	return attack.RollAttack(attackBonus, damageBonus, w.Damage)
+	w.Damage.Bonus = damageBonus
+	return attack.RollAttack(attackBonus, w.Damage)
 }
 
 func (w *Weapon) IsRanged() bool {
