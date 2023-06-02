@@ -17,24 +17,24 @@ type Weapon struct {
 }
 
 func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
-	var bonus int
+	var attackBonus, damageBonus int
 	if w.WeaponRange == "Ranged" {
-		bonus = char.Attribues[AttributeDexterity].Bonus
+		damageBonus = char.Attribues[AttributeDexterity].Bonus
 	} else if w.WeaponRange == "Melee" {
 
-		bonus = char.Attribues[AttributeStrength].Bonus
+		damageBonus = char.Attribues[AttributeStrength].Bonus
 	}
 
 	// TODO: check proficiency
 	if w.IsTwoHanded() {
 		if w.TwoHandedDamage == nil {
-			return attack.RollAttack(bonus, bonus, w.Damage)
+			return attack.RollAttack(damageBonus, damageBonus, w.Damage)
 		}
 
-		return attack.RollAttack(bonus, bonus, w.TwoHandedDamage)
+		return attack.RollAttack(attackBonus, damageBonus, w.TwoHandedDamage)
 	}
 
-	return attack.RollAttack(bonus, bonus, w.Damage)
+	return attack.RollAttack(attackBonus, damageBonus, w.Damage)
 }
 
 func (w *Weapon) IsRanged() bool {

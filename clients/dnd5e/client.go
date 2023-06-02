@@ -1,13 +1,10 @@
 package dnd5e
 
 import (
-	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
-	"net/http"
-	"strconv"
-	"strings"
-
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
+	"net/http"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
@@ -139,26 +136,15 @@ func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate 
 }
 
 func apiToDamage(input *apiEntities.Damage) *damage.Damage {
-	a := strings.Split(input.DamageDice, "+")
-	var dice string = input.DamageDice
-	var bonus, diceValue, diceCount int
-	if len(a) == 2 {
-		bonus, _ = strconv.Atoi(a[1])
-		dice = a[0]
+	dmg, err := damage.DamageDiceToDamage(input.DamageDice)
+	if err != nil {
+		return nil
 	}
 
-	b := strings.Split(dice, "d")
-	if len(b) == 2 {
-		diceCount, _ = strconv.Atoi(b[0])
-		diceValue, _ = strconv.Atoi(b[1])
-	}
+	dmg.DamageType = damage.Type(input.DamageType.Key)
 
 	// TODO: add damage type
-	return &damage.Damage{
-		DiceCount: diceCount,
-		DiceSize:  diceValue,
-		Bonus:     bonus,
-	}
+	return dmg
 }
 
 func apisToDamages(input []*apiEntities.Damage) []*damage.Damage {
@@ -168,6 +154,7 @@ func apisToDamages(input []*apiEntities.Damage) []*damage.Damage {
 
 	var damages []*damage.Damage
 	for _, d := range input {
+
 		damages = append(damages, apiToDamage(d))
 	}
 
