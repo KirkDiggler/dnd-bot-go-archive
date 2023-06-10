@@ -1,6 +1,7 @@
 package discordbot
 
 import (
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
@@ -34,6 +35,7 @@ type Config struct {
 	DnD5EClient   dnd5e.Client
 	PartyRepo     party.Interface
 	CharacterRepo characters.Manager
+	RoomManager   rooms.Manager
 }
 
 func New(cfg *Config) (*bot, error) {
@@ -78,9 +80,18 @@ func New(cfg *Config) (*bot, error) {
 		return nil, err
 	}
 
+	roomManager, err := rooms.New(&rooms.Config{
+		Client:           cfg.DnD5EClient,
+		CharacterManager: cfg.CharacterRepo,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	characterComponent, err := character.NewCharacter(&character.CharacterConfig{
 		Client:           cfg.DnD5EClient,
 		CharacterManager: cfg.CharacterRepo,
+		RoomManager:      roomManager,
 	})
 	if err != nil {
 		return nil, err

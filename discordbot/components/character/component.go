@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
 	"log"
 	"strings"
 
@@ -28,11 +29,13 @@ const (
 type Character struct {
 	client      dnd5e.Client
 	charManager characters.Manager
+	roomManager rooms.Manager
 }
 
 type CharacterConfig struct {
 	Client           dnd5e.Client
 	CharacterManager characters.Manager
+	RoomManager      rooms.Manager
 }
 
 type charChoice struct {
@@ -53,9 +56,15 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 	if cfg.CharacterManager == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.CharacterManager")
 	}
+
+	if cfg.RoomManager == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.RoomManager")
+	}
+
 	return &Character{
 		client:      cfg.Client,
 		charManager: cfg.CharacterManager,
+		roomManager: cfg.RoomManager,
 	}, nil
 }
 
@@ -84,6 +93,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "attack",
 				Description: "Attack a target using your equipped weapon",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "room",
+				Description: "Loads the active room for the player",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -105,6 +118,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleEquipInventory(s, i)
 			case "attack":
 				c.handleAttack(s, i)
+			case "room":
+				c.handleLoadRoom(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:

@@ -14,6 +14,14 @@ type Monster struct {
 	Key         string           `json:"key"`
 }
 
+func (m *Monster) String() string {
+	if m.Template == nil {
+		return "<template not loaded>"
+	}
+
+	return m.Template.Name
+}
+
 // Attack selects a random action and performs the attack
 //
 // returns an ampty result if the monster has no actions
