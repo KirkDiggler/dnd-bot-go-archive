@@ -23,3 +23,19 @@ const (
 	TypePlayerAttack  Type = "player_attack"
 	TypeMonsterAttack Type = "monster_attack"
 )
+
+func (d *Data) IsPlayerAttack() bool {
+	return d.Type == TypePlayerAttack
+}
+
+func (d *Data) IsMonsterAttack() bool {
+	return d.Type == TypeMonsterAttack
+}
+
+func (d *Data) IsAttack() bool {
+	return d.IsPlayerAttack() || d.IsMonsterAttack()
+}
+
+func (d *Data) IsUnset() bool {
+	return d.Type == TypeUnset
+}

@@ -2,7 +2,7 @@ package combat_log
 
 type ListByEncounterInput struct {
 	EncounterID string
-	Limit       int
-	Offset      int
+	Limit       int64
+	Offset      int64
 	Reverse     bool
 }
