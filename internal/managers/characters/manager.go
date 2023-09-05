@@ -193,7 +193,7 @@ func (m *manager) SaveState(ctx context.Context, state *entities.CharacterCreati
 	}
 
 	if state.CharacterID == "" {
-		return nil, dnderr.NewMissingParameterError("state.CharacterID")
+		return nil, dnderr.NewMissingParameterError("state.PlayerID")
 	}
 
 	result, err := m.stateRepo.Put(ctx, state)

@@ -141,6 +141,13 @@ func (c *RonnieD) HandleMessageCreate(s *discordgo.Session, m *discordgo.Message
 			log.Print(err)
 		}
 	}
+
+	if m.Content == "how about you ronnie" || m.Content == "how about you ronnie d" {
+		_, err := s.ChannelMessageSend(m.ChannelID, "I'm good Bro, thanks for asking")
+		if err != nil {
+			log.Print(err)
+		}
+	}
 }
 
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {

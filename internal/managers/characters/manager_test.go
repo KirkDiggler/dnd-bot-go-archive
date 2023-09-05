@@ -94,7 +94,7 @@ func (s *managerSuite) TestSaveStateMissingState() {
 func (s *managerSuite) TestSaveStateMissingCharacterID() {
 	_, err := s.fixture.SaveState(s.ctx, &entities.CharacterCreation{})
 	s.Error(err)
-	s.EqualError(err, "Missing parameter: state.CharacterID")
+	s.EqualError(err, "Missing parameter: state.PlayerID")
 }
 
 func (s *managerSuite) TestSaveStateRepoErrors() {

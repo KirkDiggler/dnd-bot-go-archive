@@ -1,7 +1,10 @@
 package dnd5e
 
 import (
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
@@ -107,4 +110,92 @@ func (c *client) doGetProficiency(key string) (*apiEntities.Proficiency, error) 
 	}
 
 	return response, nil
+}
+
+func (c *client) GetMonster(key string) (*entities.MonsterTemplate, error) {
+	monsterTemplate, err := c.client.GetMonster(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiToMonsterTemplate(monsterTemplate), nil
+}
+
+func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {
+	if input == nil {
+		return nil
+	}
+
+	return &entities.MonsterTemplate{
+		Key:             input.Key,
+		Name:            input.Name,
+		Type:            input.Type,
+		ArmorClass:      input.ArmorClass,
+		HitPoints:       input.HitPoints,
+		HitDice:         input.HitDice,
+		ChallengeRating: input.ChallengeRating,
+		Actions:         apisToMonsterActions(input.MonsterActions),
+	}
+}
+
+func apiToDamage(input *apiEntities.Damage) *damage.Damage {
+	a := strings.Split(input.DamageDice, "+")
+	var dice string = input.DamageDice
+	var bonus, diceValue, diceCount int
+	if len(a) == 2 {
+		bonus, _ = strconv.Atoi(a[1])
+		dice = a[0]
+	}
+
+	b := strings.Split(dice, "d")
+	if len(b) == 2 {
+		diceCount, _ = strconv.Atoi(b[0])
+		diceValue, _ = strconv.Atoi(b[1])
+	}
+
+	// TODO: add damage type
+	return &damage.Damage{
+		DiceCount: diceCount,
+		DiceSize:  diceValue,
+		Bonus:     bonus,
+	}
+}
+
+func apisToDamages(input []*apiEntities.Damage) []*damage.Damage {
+	if input == nil {
+		return nil
+	}
+
+	var damages []*damage.Damage
+	for _, d := range input {
+		damages = append(damages, apiToDamage(d))
+	}
+
+	return damages
+}
+
+func apisToMonsterActions(input []*apiEntities.MonsterAction) []*entities.MonsterAction {
+	if input == nil {
+		return nil
+	}
+
+	var monsterActions []*entities.MonsterAction
+	for _, ma := range input {
+		monsterActions = append(monsterActions, apiToMonsterAction(ma))
+	}
+
+	return monsterActions
+}
+
+func apiToMonsterAction(input *apiEntities.MonsterAction) *entities.MonsterAction {
+	if input == nil {
+		return nil
+	}
+
+	return &entities.MonsterAction{
+		Name:        input.Name,
+		Description: input.Description,
+		AttackBonus: input.AttackBonus,
+		Damage:      apisToDamages(input.Damage),
+	}
 }

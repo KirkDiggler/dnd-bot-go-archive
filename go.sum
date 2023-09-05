@@ -10,10 +10,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fadedpez/dnd5e-api v0.0.0-20230130054644-8fef11eb18de h1:+/r2UQ3fy6X9WB/3aQNWP5tioviE9sAxtNDVqOFPFRg=
-github.com/fadedpez/dnd5e-api v0.0.0-20230130054644-8fef11eb18de/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/fadedpez/dnd5e-api v0.0.0-20230205033714-db16eccca069 h1:HxeEAf3l8/lIWet3uvCOblqf+imxFjQ46QiEzmieArc=
 github.com/fadedpez/dnd5e-api v0.0.0-20230205033714-db16eccca069/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
+github.com/fadedpez/dnd5e-api v0.0.0-20230205072901-b67777537667 h1:Tu3i+h1k/jN4K1LoNcv4jH0H+lz+XJAZHpMQ+tDmOh8=
+github.com/fadedpez/dnd5e-api v0.0.0-20230205072901-b67777537667/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
