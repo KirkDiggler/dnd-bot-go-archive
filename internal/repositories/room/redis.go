@@ -3,6 +3,8 @@ package room
 import (
 	"context"
 	"encoding/json"
+	"log"
+
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/go-redis/redis/v9"
@@ -102,6 +104,7 @@ func (r *Redis) Create(ctx context.Context, room *Data) (*Data, error) {
 		return nil, err
 	}
 
+	log.Printf("room created %+v\n", room)
 	return room, nil
 }
 
@@ -134,7 +137,11 @@ func (r *Redis) Get(ctx context.Context, id string) (*Data, error) {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
 
-	result := r.client.Get(ctx, getRoomKey(id))
+	return r.doGet(ctx, getRoomKey(id))
+}
+
+func (r *Redis) doGet(ctx context.Context, key string) (*Data, error) {
+	result := r.client.Get(ctx, key)
 	if result.Err() != nil {
 		if result.Err() == redis.Nil {
 			return nil, dnderr.NewNotFoundError("room not found")
@@ -177,14 +184,16 @@ func (r *Redis) ListByPlayer(ctx context.Context, input *ListByPlayerInput) ([]*
 		return nil, err
 	}
 
-	rooms := make([]*Data, len(roomKeys))
-	for i, roomKey := range roomKeys {
-		room, err := r.Get(ctx, roomKey)
+	rooms := make([]*Data, 0)
+	for _, roomKey := range roomKeys {
+		room, err := r.doGet(ctx, roomKey)
 		if err != nil {
-			return nil, err
+			log.Println(err)
+
+			continue
 		}
 
-		rooms[i] = room
+		rooms = append(rooms, room)
 	}
 
 	return rooms, nil

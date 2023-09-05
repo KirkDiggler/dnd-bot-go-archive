@@ -2,6 +2,9 @@ package rooms
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/dice"
@@ -90,7 +93,7 @@ func (m *Implementation) LoadRoom(ctx context.Context, input *LoadRoomInput) (*L
 
 	out, err := m.hydrateRoom(ctx, rooms[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to hydrate room: %w", err)
 	}
 
 	return &LoadRoomOutput{
@@ -128,6 +131,100 @@ func (m *Implementation) HasActiveRoom(ctx context.Context, input *HasActiveRoom
 	}, nil
 }
 
+func (m *Implementation) Attack(ctx context.Context, playerID string) (string, error) {
+	rm, err := m.LoadRoom(ctx, &LoadRoomInput{PlayerID: playerID})
+	if err != nil {
+		return "", err
+	}
+
+	player, err := rm.Room.Character.Attack()
+	if err != nil {
+		return "", err
+	}
+
+	mon, err := rm.Room.Monster.Attack()
+	if err != nil {
+		return "", err
+	}
+
+	var msgBuilder strings.Builder
+
+	if rm.Room.CharacterInitiative == 0 {
+		rollResult, err := dice.Roll(1, 20, rm.Room.Character.Attribues[entities.AttributeDexterity].Bonus)
+		if err != nil {
+			return "", err
+		}
+		rm.Room.CharacterInitiative = rollResult.Total
+	}
+
+	if rm.Room.MonsterInitiative == 0 {
+		rollResult, err := dice.Roll(1, 20, 0)
+		if err != nil {
+			return "", err
+		}
+		rm.Room.MonsterInitiative = rollResult.Total
+	}
+
+	msgBuilder.WriteString(fmt.Sprintf("You rolled a %d for initiative\n", rm.Room.CharacterInitiative))
+	msgBuilder.WriteString(fmt.Sprintf("The monster rolled a %d for initiative\n", rm.Room.MonsterInitiative))
+
+	msgBuilder.WriteString(fmt.Sprintf("You rolled a %d for attack, the monster has AC: %d\n", player[0].AttackRoll, rm.Room.Monster.Template.ArmorClass))
+	msgBuilder.WriteString(fmt.Sprintf("The monster rolled a %d for attack, you have AC: %d\n", mon[0].AttackRoll, rm.Room.Character.AC))
+	if rm.Room.CharacterInitiative > rm.Room.MonsterInitiative {
+		if player[0].AttackRoll >= rm.Room.Monster.Template.ArmorClass {
+			msgBuilder.WriteString(fmt.Sprintf("You hit the monster for %d damage\n", player[0].DamageRoll))
+			rm.Room.Monster.CurrentHP -= player[0].DamageRoll
+			if rm.Room.Monster.CurrentHP <= 0 {
+				rm.Room.Status = entities.RoomStatusWon
+				msgBuilder.WriteString("you defeated the monster")
+				return msgBuilder.String(), nil
+			}
+		}
+
+		if mon[0].AttackRoll >= rm.Room.Character.AC {
+			msgBuilder.WriteString(fmt.Sprintf("The monster hit you for %d damage\n", mon[0].DamageRoll))
+			rm.Room.Character.CurrentHitPoints -= mon[0].DamageRoll
+			if rm.Room.Character.CurrentHitPoints <= 0 {
+				rm.Room.Status = entities.RoomStatusLost
+				msgBuilder.WriteString("you were defeated")
+				return msgBuilder.String(), nil
+			}
+		}
+		rm.Room.Character.CurrentHitPoints -= mon[0].DamageRoll
+	} else {
+		if mon[0].AttackRoll >= rm.Room.Character.AC {
+			msgBuilder.WriteString(fmt.Sprintf("The monster hit you for %d damage\n", mon[0].DamageRoll))
+			rm.Room.Character.CurrentHitPoints -= mon[0].DamageRoll
+			if rm.Room.Character.CurrentHitPoints <= 0 {
+				rm.Room.Status = entities.RoomStatusLost
+				msgBuilder.WriteString("you were defeated")
+				return msgBuilder.String(), nil
+			}
+		}
+
+		if player[0].AttackRoll >= rm.Room.Monster.Template.ArmorClass {
+			rm.Room.Monster.CurrentHP -= player[0].DamageRoll
+			if rm.Room.Monster.CurrentHP <= 0 {
+				rm.Room.Status = entities.RoomStatusWon
+				msgBuilder.WriteString("you defeated the monster")
+				return msgBuilder.String(), nil
+			}
+		}
+	}
+
+	_, err = m.roomRepo.Update(ctx, room.EntityToData(rm.Room))
+	if err != nil {
+		return "", err
+	}
+
+	err = m.monsterRepo.PutMonster(ctx, rm.Room.Monster)
+	if err != nil {
+		return "", err
+	}
+
+	return msgBuilder.String(), nil
+}
+
 func statusToEntity(status room.Status) entities.RoomStatus {
 	switch status {
 	case room.StatusActive:
@@ -150,12 +247,14 @@ func (m *Implementation) createRoom(ctx context.Context, playerID string) (*enti
 		return nil, err
 	}
 
-	mon, err := m.monsterRepo.PutMonster(ctx, &entities.Monster{
+	mon := &entities.Monster{
 		ID:          m.uuider.New(),
 		CharacterID: playerID,
 		Key:         monsterTemplate.Key,
 		CurrentHP:   hp.Total,
-	})
+	}
+
+	err = m.monsterRepo.PutMonster(ctx, mon)
 	if err != nil {
 		return nil, err
 	}

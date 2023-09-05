@@ -1,9 +1,11 @@
 package entities
 
 import (
+	"fmt"
+	"math/rand"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/attack"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/damage"
-	"math/rand"
 )
 
 type Monster struct {
@@ -19,7 +21,7 @@ func (m *Monster) String() string {
 		return "<template not loaded>"
 	}
 
-	return m.Template.Name
+	return fmt.Sprintf("%s, HP: %d", m.Template.Name, m.CurrentHP)
 }
 
 // Attack selects a random action and performs the attack

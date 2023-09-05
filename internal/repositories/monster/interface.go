@@ -2,7 +2,6 @@ package monster
 
 import (
 	"context"
-
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 )
 

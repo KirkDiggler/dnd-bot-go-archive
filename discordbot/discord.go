@@ -81,18 +81,10 @@ func New(cfg *Config) (*bot, error) {
 		return nil, err
 	}
 
-	roomManager, err := rooms.New(&rooms.Config{
-		Client:           cfg.DnD5EClient,
-		CharacterManager: cfg.CharacterManager,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	characterComponent, err := character.NewCharacter(&character.CharacterConfig{
 		Client:           cfg.DnD5EClient,
 		CharacterManager: cfg.CharacterManager,
-		RoomManager:      roomManager,
+		RoomManager:      cfg.RoomManager,
 	})
 	if err != nil {
 		return nil, err

@@ -303,6 +303,14 @@ func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
 	c.Attribues[attr] = c.Attribues[attr].AddBonus(bonus)
 }
 
+func (c *Character) ShortString() string {
+	if c.Race == nil || c.Class == nil {
+		return "Character not fully created"
+	}
+
+	return fmt.Sprintf("%s the %s %s HP: %d\n", c.Name, c.Race.Name, c.Class.Name, c.CurrentHitPoints)
+}
+
 func (c *Character) String() string {
 	msg := strings.Builder{}
 	if c.Race == nil || c.Class == nil {

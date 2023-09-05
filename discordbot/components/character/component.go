@@ -3,9 +3,10 @@ package character
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
 	"log"
 	"strings"
+
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
@@ -213,6 +214,22 @@ func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.In
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
+	}
+	msg := char.String()
+
+	roomResult, err := c.roomManager.HasActiveRoom(context.Background(), &rooms.HasActiveRoomInput{PlayerID: char.ID})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	if roomResult.HasActiveRoom {
+		room, err := c.roomManager.LoadRoom(context.Background(), &rooms.LoadRoomInput{PlayerID: char.ID})
+		if err != nil {
+			log.Println(err)
+			return // TODO handle error
+		}
+		msg += "\n" + room.Room.String()
 	}
 
 	response := &discordgo.InteractionResponse{
