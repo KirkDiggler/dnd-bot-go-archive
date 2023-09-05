@@ -3,6 +3,8 @@ package discordbot
 import (
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
+
 	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/character"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
@@ -28,12 +30,13 @@ type bot struct {
 }
 
 type Config struct {
-	Token         string
-	GuildID       string
-	AppID         string
-	DnD5EClient   dnd5e.Client
-	PartyRepo     party.Interface
-	CharacterRepo characters.Manager
+	Token            string
+	GuildID          string
+	AppID            string
+	DnD5EClient      dnd5e.Client
+	PartyRepo        party.Interface
+	CharacterManager characters.Manager
+	RoomManager      rooms.Manager
 }
 
 func New(cfg *Config) (*bot, error) {
@@ -80,7 +83,8 @@ func New(cfg *Config) (*bot, error) {
 
 	characterComponent, err := character.NewCharacter(&character.CharacterConfig{
 		Client:           cfg.DnD5EClient,
-		CharacterManager: cfg.CharacterRepo,
+		CharacterManager: cfg.CharacterManager,
+		RoomManager:      cfg.RoomManager,
 	})
 	if err != nil {
 		return nil, err

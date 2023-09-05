@@ -37,7 +37,7 @@ func New(cfg *Config) (Manager, error) {
 	}
 
 	if cfg.CharacterRepo == nil {
-		return nil, dnderr.NewMissingParameterError("cfg.CharacterRepo")
+		return nil, dnderr.NewMissingParameterError("cfg.CharacterManager")
 	}
 
 	if cfg.StateRepo == nil {

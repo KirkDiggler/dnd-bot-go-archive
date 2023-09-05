@@ -8,13 +8,17 @@ const (
 	StatusUnset    Status = ""
 	StatusActive   Status = "active"
 	StatusInactive Status = "inactive"
+	StatusWon      Status = "won"
+	StatusLost     Status = "lost"
 )
 
 type Data struct {
-	ID        string `json:"id"`
-	Status    Status `json:"status"`
-	PlayerID  string `json:"player_id"`
-	MonsterID string `json:"monster_id"`
+	ID                string `json:"id"`
+	Status            Status `json:"status"`
+	PlayerID          string `json:"player_id"`
+	PlayerInitiative  int    `json:"player_initiative"`
+	MonsterID         string `json:"monster_id"`
+	MonsterInitiative int    `json:"monster_initiative"`
 }
 
 func EntityToRoomStatus(input entities.RoomStatus) Status {
@@ -23,6 +27,10 @@ func EntityToRoomStatus(input entities.RoomStatus) Status {
 		return StatusActive
 	case entities.RoomStatusInactive:
 		return StatusInactive
+	case entities.RoomStatusWon:
+		return StatusWon
+	case entities.RoomStatusLost:
+		return StatusLost
 	default:
 		return StatusUnset
 	}
@@ -43,9 +51,11 @@ func EntityToData(input *entities.Room) *Data {
 	}
 
 	return &Data{
-		ID:        input.ID,
-		Status:    EntityToRoomStatus(input.Status),
-		PlayerID:  charID,
-		MonsterID: monsterID,
+		ID:                input.ID,
+		Status:            EntityToRoomStatus(input.Status),
+		PlayerID:          charID,
+		PlayerInitiative:  input.CharacterInitiative,
+		MonsterID:         monsterID,
+		MonsterInitiative: input.MonsterInitiative,
 	}
 }

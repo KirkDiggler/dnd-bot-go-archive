@@ -9,6 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/monster"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/room"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_creation"
@@ -100,14 +104,40 @@ func main() {
 		panic(err)
 	}
 
-	bot, err := discordbot.New(&discordbot.Config{
-		Token:         token,
-		GuildID:       guildID,
-		AppID:         appID,
-		DnD5EClient:   dnd5eClient,
-		PartyRepo:     partyRepo,
-		CharacterRepo: charManager,
+	roomRepo, err := room.NewRedis(&room.RedisConfig{
+		Client: redisClient,
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	monsterRepo, err := monster.NewRedis(&monster.RedisConfig{
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	roomManager, err := rooms.New(&rooms.Config{
+		Client:           dnd5eClient,
+		CharacterManager: charManager,
+		RoomRepo:         roomRepo,
+		MonsterRepo:      monsterRepo,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	bot, err := discordbot.New(&discordbot.Config{
+		Token:            token,
+		GuildID:          guildID,
+		AppID:            appID,
+		DnD5EClient:      dnd5eClient,
+		PartyRepo:        partyRepo,
+		CharacterManager: charManager,
+		RoomManager:      roomManager,
+	})
+
 	if err != nil {
 		panic(err)
 	}

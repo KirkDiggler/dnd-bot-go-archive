@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/rooms"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
@@ -28,11 +30,13 @@ const (
 type Character struct {
 	client      dnd5e.Client
 	charManager characters.Manager
+	roomManager rooms.Manager
 }
 
 type CharacterConfig struct {
 	Client           dnd5e.Client
 	CharacterManager characters.Manager
+	RoomManager      rooms.Manager
 }
 
 type charChoice struct {
@@ -53,9 +57,15 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 	if cfg.CharacterManager == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.CharacterManager")
 	}
+
+	if cfg.RoomManager == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.RoomManager")
+	}
+
 	return &Character{
 		client:      cfg.Client,
 		charManager: cfg.CharacterManager,
+		roomManager: cfg.RoomManager,
 	}, nil
 }
 
@@ -84,6 +94,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "attack",
 				Description: "Attack a target using your equipped weapon",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "room",
+				Description: "Loads the active room for the player",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -105,6 +119,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleEquipInventory(s, i)
 			case "attack":
 				c.handleAttack(s, i)
+			case "room":
+				c.handleLoadRoom(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
@@ -198,6 +214,22 @@ func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.In
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
+	}
+	msg := char.String()
+
+	roomResult, err := c.roomManager.HasActiveRoom(context.Background(), &rooms.HasActiveRoomInput{PlayerID: char.ID})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	if roomResult.HasActiveRoom {
+		room, err := c.roomManager.LoadRoom(context.Background(), &rooms.LoadRoomInput{PlayerID: char.ID})
+		if err != nil {
+			log.Println(err)
+			return // TODO handle error
+		}
+		msg += "\n" + room.Room.String()
 	}
 
 	response := &discordgo.InteractionResponse{
