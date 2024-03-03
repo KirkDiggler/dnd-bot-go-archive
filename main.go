@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
 	"os"
@@ -17,8 +18,6 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/party"
-
-	"github.com/go-redis/redis/v9"
 
 	"github.com/KirkDiggler/dnd-bot-go/clients/dnd5e"
 
