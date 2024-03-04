@@ -22,7 +22,7 @@ type Config struct {
 	Client redis.UniversalClient
 }
 
-func NewRedis(cfg *Config) (Interface, error) {
+func NewRedis(cfg *Config) (*Redis, error) {
 	if cfg == nil {
 		return nil, dnderr.NewMissingParameterError("cfg")
 	}
@@ -58,7 +58,7 @@ func (r *Redis) Get(ctx context.Context, input *GetInput) (*GetOutput, error) {
 		return nil, err
 	}
 
-	slog.Info("Got game: ", game)
+	slog.Info("Get ", "game", game.String())
 
 	return &GetOutput{
 		Game: game,
@@ -74,7 +74,7 @@ func (r *Redis) Create(ctx context.Context, input *CreateInput) (*CreateOutput, 
 		return nil, dnderr.NewMissingParameterError("input.Game")
 	}
 
-	slog.Info("Creating game: ", input.Game)
+	slog.Info("Creating ", "game", input.Game.String())
 
 	gameJson, err := json.Marshal(input.Game)
 	if err != nil {
