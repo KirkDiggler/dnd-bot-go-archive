@@ -21,7 +21,7 @@ func (g *Game) String() string {
 func (g *Game) MarshalGameString() string {
 	output, err := json.Marshal(g)
 	if err != nil {
-		slog.Warn("error marshalling game", g, err.Error())
+		slog.Warn("error marshalling game", g.String(), err.Error())
 		return ""
 	}
 

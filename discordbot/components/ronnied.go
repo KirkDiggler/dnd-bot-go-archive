@@ -231,6 +231,8 @@ func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
+// AddResult adds a result to a game
+// TODO: move to the roll command.  All rolls should be sent and based on the success response we will send a message
 func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "addresult" {
@@ -246,25 +248,37 @@ func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate
 			return
 		}
 
-		msg := fmt.Sprintf("You rolled a %d", result)
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msg,
-			},
-		})
-		if err != nil {
-			log.Print(err)
+		if result.Success {
+			msg := fmt.Sprintf("Drink assigned to %s", result.AssignedTo)
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msg,
+				},
+			})
+			if err != nil {
+				log.Print(err)
+			}
 		}
+
 	}
 }
 
 func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "joingame" {
-		gameID := data.Options[0].Options[0].StringValue()
-		msg := fmt.Sprintf("You joined game %d", gameID)
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		gameID := i.ChannelID
+		_, err := c.manager.JoinGame(context.Background(), &ronnied_actions.JoinGameInput{
+			GameID:   gameID,
+			MemberID: i.Member.User.ID,
+		})
+		if err != nil {
+			log.Print(err)
+			return
+		}
+
+		msg := fmt.Sprintf("You joined the game")
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: msg,
