@@ -1,7 +1,10 @@
 package components
 
 import (
+	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
 	"log"
 	"math/rand"
 	"strings"
@@ -13,13 +16,25 @@ const ronnieRollBack = "ronnie-roll-back"
 
 type RonnieD struct {
 	messageID string
+	manager   ronnied_actions.Interface
 }
 
 type RonnieDConfig struct {
+	Manager ronnied_actions.Interface
 }
 
-func NewRonnieD() (*RonnieD, error) {
-	return &RonnieD{}, nil
+func NewRonnieD(cfg *RonnieDConfig) (*RonnieD, error) {
+	if cfg == nil {
+		return nil, dnderr.NewMissingParameterError("cfg")
+	}
+
+	if cfg.Manager == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.Manager")
+	}
+
+	return &RonnieD{
+		manager: cfg.Manager,
+	}, nil
 }
 
 func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -192,10 +207,80 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 	}
 }
 
+func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	if data.Options[0].Name == "gettab" {
+		result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
+			MemberID: i.Member.User.ID,
+		})
+		if err != nil {
+			log.Print(err)
+			return
+		}
+
+		msg := fmt.Sprintf("Your tab is %d", result.Count)
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	if data.Options[0].Name == "addresult" {
+		gameID := data.Options[0].Options[0].StringValue()
+		roll := data.Options[0].Options[1].IntValue()
+		result, err := c.manager.AddRoll(context.Background(), &ronnied_actions.AddRollInput{
+			GameID:   gameID,
+			MemberID: i.Member.User.ID,
+			Roll:     int(roll),
+		})
+		if err != nil {
+			log.Print(err)
+			return
+		}
+
+		msg := fmt.Sprintf("You rolled a %d", result)
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	if data.Options[0].Name == "joingame" {
+		gameID := data.Options[0].Options[0].StringValue()
+		msg := fmt.Sprintf("You joined game %d", gameID)
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
 func (c *RonnieD) CreateGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "creategame" {
 		gameName := data.Options[0].Options[0].StringValue()
+
 		msg := fmt.Sprintf("Game %s created, ID: %d", gameName, rand.Intn(1000))
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -234,6 +319,34 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 						Required:    true,
 					},
 				},
+			}, {
+				Name:        "joingame",
+				Description: "Join a game",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "gameid",
+						Description: "ID of the game",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+				},
+			}, {
+				Name:        "addresult",
+				Description: "Add a result to a game",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "gameid",
+						Description: "ID of the game",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+				},
+			}, {
+				Name:        "gettab",
+				Description: "Get your tab",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}

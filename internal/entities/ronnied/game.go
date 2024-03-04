@@ -8,9 +8,10 @@ import (
 )
 
 type Game struct {
-	ID        string     `json:"id"`
-	Name      string     `name:"name"`
-	StartedAt *time.Time `json:"started_at"`
+	ID          string            `json:"id"`
+	Name        string            `name:"name"`
+	StartedAt   *time.Time        `json:"started_at"`
+	Memberships []*GameMembership `json:"memberships"`
 }
 
 func (g *Game) String() string {
