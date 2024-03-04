@@ -29,6 +29,13 @@ type JoinOutput struct {
 	Member *ronnied.GameMembership
 }
 
+type LeaveInput struct {
+	GameID   string
+	MemberID string
+}
+
+type LeaveOutput struct{}
+
 type AddEntryInput struct {
 	GameID     string
 	MemberID   string
@@ -41,6 +48,7 @@ type AddEntryOutput struct {
 }
 
 type GetTabInput struct {
+	GameID   string
 	MemberID string
 }
 

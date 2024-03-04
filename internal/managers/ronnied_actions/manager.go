@@ -144,6 +144,7 @@ func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput
 	}
 
 	result, err := m.gameRepo.GetTab(ctx, &game.GetTabInput{
+		GameID:   input.GameID,
 		MemberID: input.MemberID,
 	})
 	if err != nil {

@@ -92,6 +92,28 @@ func (r *Redis) Create(ctx context.Context, input *CreateInput) (*CreateOutput, 
 		Game: input.Game,
 	}, nil
 }
+func (r *Redis) Leave(ctx context.Context, input *LeaveInput) (*LeaveOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	if input.MemberID == "" {
+		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	}
+
+	membershipKey := getGameMembershipKey(input.GameID)
+
+	err := r.client.SRem(ctx, membershipKey, input.MemberID).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return &LeaveOutput{}, nil
+}
 
 func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error) {
 	if input == nil {
@@ -182,7 +204,7 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 		Score:  float64(time.Now().Unix()),
 		Member: entry.ID,
 	})
-	tx.RPush(ctx, getMemberTabKey(entry.MemberID), entry.ID)
+	tx.RPush(ctx, getMemberTabKey(input.GameID, entry.MemberID), entry.ID)
 
 	_, err = tx.Exec(ctx)
 	if err != nil {
@@ -203,7 +225,7 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 		return nil, dnderr.NewMissingParameterError("input.MemberID")
 	}
 
-	tabKey := getMemberTabKey(input.MemberID)
+	tabKey := getMemberTabKey(input.GameID, input.MemberID)
 
 	count, err := r.client.LLen(ctx, tabKey).Result()
 	if err != nil {
@@ -228,11 +250,11 @@ func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOu
 		return nil, dnderr.NewMissingParameterError("input.MemberID")
 	}
 
-	tabKey := getMemberTabKey(input.MemberID)
+	tabKey := getMemberTabKey(input.GameID, input.MemberID)
 
 	tx := r.client.TxPipeline()
 	tx.LPop(ctx, tabKey)
-	tx.RPush(ctx, getMemberPaidTabKey(input.MemberID), input.MemberID)
+	tx.RPush(ctx, getMemberPaidTabKey(input.GameID, input.MemberID), input.MemberID)
 
 	_, err := tx.Exec(ctx)
 	if err != nil {
@@ -250,11 +272,11 @@ func getGameEntryKey(gameID string) string {
 func getGameListEntriesKey(gameID string) string {
 	return "game:entries:" + gameID
 }
-func getMemberTabKey(memberID string) string {
-	return "game:tab:" + memberID
+func getMemberTabKey(gameID, memberID string) string {
+	return "tab:game" + gameID + ":member:" + memberID
 }
-func getMemberPaidTabKey(memberID string) string {
-	return "game:paid:" + memberID
+func getMemberPaidTabKey(gameID, memberID string) string {
+	return "paid:game:" + gameID + ":member" + memberID
 }
 
 func getGameKey(id string) string {
