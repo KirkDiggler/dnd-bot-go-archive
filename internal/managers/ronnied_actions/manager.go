@@ -2,8 +2,13 @@ package ronnied_actions
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
+	"github.com/redis/go-redis/v9"
+	"log/slog"
 	"math/rand"
 )
 
@@ -54,6 +59,32 @@ func (m *Manager) CreateGame(ctx context.Context, input *CreateGameInput) (*Crea
 	}, nil
 }
 
+func (m *Manager) getOrCreateGame(ctx context.Context, input *JoinGameInput) (*ronnied.Game, error) {
+	gameResult, err := m.gameRepo.Get(ctx, &game.GetInput{
+		ID: input.GameID,
+	})
+	if err != nil {
+		if errors.Is(err, redis.Nil) { // TODO: make const error types (e.g. ErrNotFound)
+			createResult, createErr := m.CreateGame(ctx, &CreateGameInput{
+				Game: &ronnied.Game{
+					ID:      input.GameID,
+					Name:    input.GameName,
+					Players: []string{},
+				},
+			})
+			if createErr != nil {
+				return nil, createErr
+			}
+
+			return createResult.Game, nil
+		}
+
+		return nil, err
+	}
+
+	return gameResult.Game, nil
+}
+
 func (m *Manager) JoinGame(ctx context.Context, input *JoinGameInput) (*JoinGameOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -63,21 +94,43 @@ func (m *Manager) JoinGame(ctx context.Context, input *JoinGameInput) (*JoinGame
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	result, err := m.gameRepo.Join(ctx, &game.JoinInput{
-		GameID:   input.GameID,
-		MemberID: input.MemberID,
+	result, err := m.getOrCreateGame(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Players == nil {
+		result.Players = []string{}
+	}
+
+	for _, player := range result.Players {
+		if player == input.PlayerID {
+			return nil, dnderr.NewInvalidEntityError("player is already in the game")
+		}
+	}
+
+	result.Players = append(result.Players, input.PlayerID)
+
+	_, err = m.gameRepo.Create(ctx, &game.CreateInput{
+		Game: result,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &JoinGameOutput{
-		Member: result.Member,
-	}, nil
+	_, err = m.gameRepo.Join(ctx, &game.JoinInput{
+		GameID:   input.GameID,
+		PlayerID: input.PlayerID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &JoinGameOutput{}, nil
 }
 
 func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOutput, error) {
@@ -89,36 +142,53 @@ func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOut
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
+	// TODO: check if the player is in the game
+	// Make sure there is 1 other player in the game
 	if shouldAddEntry(input.Roll) {
-		var assignedTo = input.MemberID
+		var assignedTo = input.PlayerID
 
 		if input.Roll == 6 {
 			gameResult, err := m.gameRepo.Get(ctx, &game.GetInput{
 				ID: input.GameID,
 			})
 			if err != nil {
-				return nil, err
+				slog.Info("gameRepo.Get", "error", err)
+
+				return nil, fmt.Errorf("failed to get game: %w", err)
+			}
+
+			if gameResult.Game.Players == nil || len(gameResult.Game.Players) < 2 {
+				return nil, dnderr.NewInvalidEntityError("game must have at least 2 players")
 			}
 
 			// select a random membership for the game
-			memberships := gameResult.Game.Memberships
-			randIndex := rand.Intn(len(memberships))
-			assignedTo = memberships[randIndex].MemberID
+			availableMemberships := make([]string, len(gameResult.Game.Players)-1)
+
+			for i, membership := range gameResult.Game.Players {
+				if membership != input.PlayerID {
+					availableMemberships[i] = membership
+				}
+			}
+
+			randIndex := rand.Intn(len(availableMemberships))
+			assignedTo = availableMemberships[randIndex]
 
 		}
 
 		_, err := m.gameRepo.AddEntry(ctx, &game.AddEntryInput{
 			GameID:     input.GameID,
-			MemberID:   input.MemberID,
+			PlayerID:   input.PlayerID,
 			Roll:       input.Roll,
 			AssignedTo: assignedTo,
 		})
 		if err != nil {
-			return nil, err
+			slog.Info("gameRepo.AddEntry", "error", err)
+
+			return nil, fmt.Errorf("failed to add entry: %w", err)
 		}
 
 		return &AddRollOutput{
@@ -127,7 +197,9 @@ func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOut
 		}, nil
 	}
 
-	return &AddRollOutput{}, nil
+	return &AddRollOutput{
+		Success: false,
+	}, nil
 }
 
 func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, error) {
@@ -139,13 +211,15 @@ func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
+
+	slog.Info("GetTab", "input", input)
 
 	result, err := m.gameRepo.GetTab(ctx, &game.GetTabInput{
 		GameID:   input.GameID,
-		MemberID: input.MemberID,
+		PlayerID: input.PlayerID,
 	})
 	if err != nil {
 		return nil, err
@@ -165,13 +239,13 @@ func (m *Manager) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrink
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
 	_, err := m.gameRepo.PayDrink(ctx, &game.PayDrinkInput{
 		GameID:   input.GameID,
-		MemberID: input.MemberID,
+		PlayerID: input.PlayerID,
 	})
 	if err != nil {
 		return nil, err
@@ -180,6 +254,7 @@ func (m *Manager) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrink
 	return &PayDrinkOutput{}, nil
 
 }
+
 func shouldAddEntry(roll int) bool {
 	return roll == 1 || roll == 6
 }

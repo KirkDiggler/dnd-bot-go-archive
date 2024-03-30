@@ -53,60 +53,99 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 	var response *discordgo.InteractionResponse
 	c.messageID = i.Token
 
-	if roll == 6 {
-		msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
+	gameResult, err := c.manager.AddRoll(context.Background(), &ronnied_actions.AddRollInput{
+		GameID:   i.ChannelID,
+		PlayerID: i.Member.User.ID,
+		Roll:     roll,
+	})
+	if err != nil {
+		log.Print(err)
+
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: msgBuilder.String(),
-				Components: []discordgo.MessageComponent{
-					&discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							&discordgo.Button{
-								Label:    "Roll it back",
-								Style:    discordgo.SuccessButton,
-								CustomID: ronnieRollBack,
-								Emoji: discordgo.ComponentEmoji{
-									Name: "🍺",
-								},
-							},
-						},
-					},
-				},
+				Content: err.Error(),
 			},
 		}
-	} else if roll == 1 {
-		msgBuilder.WriteString(fmt.Sprintf("%s rolled a 1, that's a drink!", i.Member.User.Username))
+		err = s.InteractionRespond(i.Interaction, response)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+	if gameResult.Success {
+		user, userErr := s.User(gameResult.AssignedTo)
+		if userErr != nil {
+			log.Print(userErr)
+			return
+		}
+
+		msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d and the drink was assigned to %s",
+			i.Member.User.Username, roll,
+			user.Username))
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: msgBuilder.String(),
-				Components: []discordgo.MessageComponent{
-					&discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							&discordgo.Button{
-								Label:    "Roll it back",
-								Style:    discordgo.DangerButton,
-								CustomID: ronnieRollBack,
-								Emoji: discordgo.ComponentEmoji{
-									Name: "🍺",
-								},
-							},
-						},
-					},
-				},
 			},
 		}
 	} else {
-		msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d, try again", i.Member.User.Username, roll))
-		response = &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msgBuilder.String(),
-			},
+		if roll == 6 {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+					Components: []discordgo.MessageComponent{
+						&discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								&discordgo.Button{
+									Label:    "Roll it back",
+									Style:    discordgo.SuccessButton,
+									CustomID: ronnieRollBack,
+									Emoji: discordgo.ComponentEmoji{
+										Name: "🍺",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		} else if roll == 1 {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a 1, that's a drink!", i.Member.User.Username))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+					Components: []discordgo.MessageComponent{
+						&discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								&discordgo.Button{
+									Label:    "Roll it back",
+									Style:    discordgo.DangerButton,
+									CustomID: ronnieRollBack,
+									Emoji: discordgo.ComponentEmoji{
+										Name: "🍺",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		} else {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d, try again", i.Member.User.Username, roll))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+				},
+			}
 		}
 	}
-	err := s.InteractionRespond(i.Interaction, response)
+
+	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Print(err)
 	}
@@ -188,8 +227,10 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 		switch i.ApplicationCommandData().Name {
 		case "ronnied":
 			switch i.ApplicationCommandData().Options[0].Name {
-			case "creategame":
-				c.CreateGame(s, i)
+			case "joingame":
+				c.JoinGame(s, i)
+			case "gettab":
+				c.GetTab(s, i)
 			case "roll":
 				c.RonnieRoll(s, i)
 			case "advise":
@@ -225,15 +266,19 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "gettab" {
+		var msg string
+
 		result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
-			MemberID: i.Member.User.ID,
+			GameID:   i.ChannelID,
+			PlayerID: i.Member.User.ID,
 		})
 		if err != nil {
 			log.Print(err)
-			return
+			msg = err.Error()
+		} else {
+			msg = fmt.Sprintf("Your tab is %d", result.Count)
 		}
 
-		msg := fmt.Sprintf("Your tab is %d", result.Count)
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -255,7 +300,7 @@ func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate
 		roll := data.Options[0].Options[1].IntValue()
 		result, err := c.manager.AddRoll(context.Background(), &ronnied_actions.AddRollInput{
 			GameID:   gameID,
-			MemberID: i.Member.User.ID,
+			PlayerID: i.Member.User.ID,
 			Roll:     int(roll),
 		})
 		if err != nil {
@@ -283,16 +328,23 @@ func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate)
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "joingame" {
 		gameID := i.ChannelID
-		_, err := c.manager.JoinGame(context.Background(), &ronnied_actions.JoinGameInput{
-			GameID:   gameID,
-			MemberID: i.Member.User.ID,
-		})
+		// Get the channel name
+		channel, err := s.Channel(i.ChannelID)
 		if err != nil {
 			log.Print(err)
 			return
 		}
-
 		msg := fmt.Sprintf("You joined the game")
+
+		_, err = c.manager.JoinGame(context.Background(), &ronnied_actions.JoinGameInput{
+			GameID:   gameID,
+			GameName: channel.Name,
+			PlayerID: i.Member.User.ID,
+		})
+		if err != nil {
+			msg = err.Error()
+		}
+
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -337,29 +389,9 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Description: "what should I do RonnieD?",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
-				Name:        "creategame",
-				Description: "Create a game and get the game ID",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "name",
-						Description: "Name of the game",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-				},
-			}, {
 				Name:        "joingame",
 				Description: "Join a game",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "gameid",
-						Description: "ID of the game",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-				},
 			}, {
 				Name:        "addresult",
 				Description: "Add a result to a game",

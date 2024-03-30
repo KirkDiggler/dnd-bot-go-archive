@@ -101,13 +101,13 @@ func (r *Redis) Leave(ctx context.Context, input *LeaveInput) (*LeaveOutput, err
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
 	membershipKey := getGameMembershipKey(input.GameID)
 
-	err := r.client.SRem(ctx, membershipKey, input.MemberID).Err()
+	err := r.client.SRem(ctx, membershipKey, input.PlayerID).Err()
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
 	gameKey := getGameKey(input.GameID)
 
 	// make sure we have the game saved already
-	gameJson, err := r.client.Get(ctx, gameKey).Result()
+	_, err := r.client.Get(ctx, gameKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, dnderr.NewNotFoundError("game " + input.GameID + " not found")
@@ -136,25 +136,15 @@ func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
 		return nil, err
 	}
 
-	game, err := ronnied.UnmarshalGameString(gameJson)
-	if err != nil {
-		return nil, err
-	}
-
 	// we have a game, let's add the user to the game
 	membershipKey := getGameMembershipKey(input.GameID)
 
-	err = r.client.SAdd(ctx, membershipKey, input.MemberID).Err()
+	err = r.client.SAdd(ctx, membershipKey, input.PlayerID).Err()
 	if err != nil {
 		return nil, err
 	}
 
-	return &JoinOutput{
-		Member: &ronnied.GameMembership{
-			GameID:   game.ID,
-			MemberID: input.MemberID,
-		},
-	}, nil
+	return &JoinOutput{}, nil
 }
 
 func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOutput, error) {
@@ -166,8 +156,8 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
 	if input.AssignedTo == "" {
@@ -178,17 +168,20 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 		return nil, dnderr.NewInvalidParameterError(strconv.Itoa(input.Roll), "input.Roll must be 1 or 6")
 	}
 
+	// TODO: move to manager
 	if input.Roll == 1 {
-		input.AssignedTo = input.MemberID
+		input.AssignedTo = input.PlayerID
 	}
 
+	now := time.Now()
 	// TODO: make sure we have a game with that id saved
 	// TODO: ensure the assigned to and member have membership to the game
 	entry := &ronnied.GameEntry{
-		ID:       r.uuider.New(),
-		GameID:   input.GameID,
-		MemberID: input.MemberID,
-		Roll:     input.Roll,
+		ID:          r.uuider.New(),
+		GameID:      input.GameID,
+		PlayerID:    input.PlayerID,
+		Roll:        input.Roll,
+		CreatedDate: &now,
 	}
 
 	entryJson, err := json.Marshal(entry)
@@ -201,16 +194,17 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 	tx := r.client.TxPipeline()
 	tx.Set(ctx, entryKey, entryJson, 0)
 	tx.ZAdd(ctx, getGameListEntriesKey(entry.GameID), redis.Z{
-		Score:  float64(time.Now().Unix()),
+		Score:  float64(now.Unix()),
 		Member: entry.ID,
 	})
-	tx.RPush(ctx, getMemberTabKey(input.GameID, entry.MemberID), entry.ID)
+	tx.RPush(ctx, getMemberTabKey(input.GameID, entry.PlayerID), entry.ID)
 
 	_, err = tx.Exec(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: show newly assign players current tab
 	return &AddEntryOutput{
 		Entry: entry,
 	}, nil
@@ -221,11 +215,11 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	tabKey := getMemberTabKey(input.GameID, input.MemberID)
+	tabKey := getMemberTabKey(input.GameID, input.PlayerID)
 
 	count, err := r.client.LLen(ctx, tabKey).Result()
 	if err != nil {
@@ -246,17 +240,18 @@ func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOu
 		return nil, dnderr.NewMissingParameterError("input.GameID")
 	}
 
-	if input.MemberID == "" {
-		return nil, dnderr.NewMissingParameterError("input.MemberID")
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	tabKey := getMemberTabKey(input.GameID, input.MemberID)
+	tabKey := getMemberTabKey(input.GameID, input.PlayerID)
 
-	tx := r.client.TxPipeline()
-	tx.LPop(ctx, tabKey)
-	tx.RPush(ctx, getMemberPaidTabKey(input.GameID, input.MemberID), input.MemberID)
+	entryID, err := r.client.LPop(ctx, tabKey).Result()
+	if err != nil {
+		return nil, err
+	}
 
-	_, err := tx.Exec(ctx)
+	_, err = r.client.RPush(ctx, getMemberPaidTabKey(input.GameID, input.PlayerID), entryID).Result()
 	if err != nil {
 		return nil, err
 	}

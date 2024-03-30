@@ -22,23 +22,21 @@ type GetOutput struct {
 
 type JoinInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
-type JoinOutput struct {
-	Member *ronnied.GameMembership
-}
+type JoinOutput struct{}
 
 type LeaveInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
 type LeaveOutput struct{}
 
 type AddEntryInput struct {
 	GameID     string
-	MemberID   string
+	PlayerID   string
 	Roll       int
 	AssignedTo string
 }
@@ -49,7 +47,7 @@ type AddEntryOutput struct {
 
 type GetTabInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
 type GetTabOutput struct {
@@ -58,7 +56,7 @@ type GetTabOutput struct {
 
 type PayDrinkInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
 type PayDrinkOutput struct{}

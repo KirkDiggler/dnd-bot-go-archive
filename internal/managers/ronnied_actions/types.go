@@ -1,7 +1,6 @@
 package ronnied_actions
 
 import (
-	"context"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 )
 
@@ -15,16 +14,16 @@ type CreateGameOutput struct {
 
 type JoinGameInput struct {
 	GameID   string
-	MemberID string
+	GameName string
+	PlayerID string
 }
 
 type JoinGameOutput struct {
-	Member *ronnied.GameMembership
 }
 
 type AddRollInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 	Roll     int
 }
 
@@ -35,7 +34,7 @@ type AddRollOutput struct {
 
 type GetTabInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
 type GetTabOutput struct {
@@ -44,15 +43,7 @@ type GetTabOutput struct {
 
 type PayDrinkInput struct {
 	GameID   string
-	MemberID string
+	PlayerID string
 }
 
 type PayDrinkOutput struct{}
-
-type Interface interface {
-	CreateGame(ctx context.Context, input *CreateGameInput) (*CreateGameOutput, error)
-	JoinGame(ctx context.Context, input *JoinGameInput) (*JoinGameOutput, error)
-	AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOutput, error)
-	GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, error)
-	PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOutput, error)
-}

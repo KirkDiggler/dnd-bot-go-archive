@@ -8,10 +8,10 @@ import (
 )
 
 type Game struct {
-	ID          string            `json:"id"`
-	Name        string            `name:"name"`
-	StartedAt   *time.Time        `json:"started_at"`
-	Memberships []*GameMembership `json:"memberships"`
+	ID        string     `json:"id"`   // Channel ID
+	Name      string     `name:"name"` // channel name when created
+	StartedAt *time.Time `json:"started_at"`
+	Players   []string   `json:"players"`
 }
 
 func (g *Game) String() string {
@@ -38,23 +38,19 @@ func UnmarshalGameString(input string) (*Game, error) {
 	return out, nil
 }
 
-type GameMembership struct {
-	GameID   string `json:"game_id"`
-	MemberID string `json:"member_id"`
-}
-
 type GameEntry struct {
 	ID             string     `json:"id"`
 	GameID         string     `json:"game_id"`
-	MemberID       string     `json:"member_id"`
+	PlayerID       string     `json:"player_id"`
 	Roll           int        `json:"roll"`
 	AssignedTo     string     `json:"assigned_to"`
-	Status         string     `json:"status"`
+	Status         string     `json:"status"` // TODO: what statuses can we have?
 	CreatedDate    *time.Time `json:"created_date"`
 	ReconciledDate *time.Time `json:"reconciled_date"`
 }
 
-type Tab struct {
-	MemberID    string `json:"member_id"`
+type GameTab struct {
+	GameID      string `json:"game_id"`
+	PlayerID    string `json:"player_id"`
 	GameEntryID string `json:"game_entry_id"`
 }
