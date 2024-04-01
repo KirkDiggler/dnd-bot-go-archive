@@ -166,11 +166,11 @@ func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOut
 			}
 
 			// select a random membership for the game
-			availableMemberships := make([]string, len(gameResult.Game.Players)-1)
+			availableMemberships := make([]string, 0)
 
-			for i, membership := range gameResult.Game.Players {
+			for _, membership := range gameResult.Game.Players {
 				if membership != input.PlayerID {
-					availableMemberships[i] = membership
+					availableMemberships = append(availableMemberships, membership)
 				}
 			}
 

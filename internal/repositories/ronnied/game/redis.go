@@ -179,7 +179,7 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 	entry := &ronnied.GameEntry{
 		ID:          r.uuider.New(),
 		GameID:      input.GameID,
-		PlayerID:    input.PlayerID,
+		PlayerID:    input.AssignedTo,
 		Roll:        input.Roll,
 		CreatedDate: &now,
 	}

@@ -49,6 +49,7 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 
 func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	roll := rand.Intn(6) + 1
+
 	msgBuilder := strings.Builder{}
 	var response *discordgo.InteractionResponse
 	c.messageID = i.Token
@@ -73,7 +74,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 		}
 	}
 
-	if gameResult.Success {
+	if gameResult != nil && gameResult.Success {
 		user, userErr := s.User(gameResult.AssignedTo)
 		if userErr != nil {
 			log.Print(userErr)
@@ -233,6 +234,8 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.GetTab(s, i)
 			case "roll":
 				c.RonnieRoll(s, i)
+			case "paydrink":
+				c.PayDrink(s, i)
 			case "advise":
 				grabBag := []string{
 					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: that's a drink", i.Member.User.Username),
@@ -324,6 +327,34 @@ func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate
 	}
 }
 
+func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	if data.Options[0].Name == "paydrink" {
+		gameID := i.ChannelID
+		// Get the channel name
+
+		msg := fmt.Sprintf("You paid a drink on your tab")
+
+		_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+			GameID:   gameID,
+			PlayerID: i.Member.User.ID,
+		})
+		if err != nil {
+			msg = err.Error()
+		}
+
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
 func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "joingame" {
@@ -407,6 +438,10 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 			}, {
 				Name:        "gettab",
 				Description: "Get your tab",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "paydrink",
+				Description: "Pay your tab",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
