@@ -357,7 +357,11 @@ func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate)
 				builder.WriteString(err.Error())
 			}
 		} else {
-			builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
+			if result.Count == 0 {
+				builder.WriteString("Your tab is paid off!")
+			} else {
+				builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
+			}
 		}
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
