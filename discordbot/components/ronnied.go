@@ -2,9 +2,11 @@ package components
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"math/rand"
 	"strings"
@@ -333,20 +335,35 @@ func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate)
 		gameID := i.ChannelID
 		// Get the channel name
 
-		msg := fmt.Sprintf("You paid a drink on your tab")
+		builder := strings.Builder{}
+		builder.WriteString("You paid a drink on your tab. ")
 
 		_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
 			GameID:   gameID,
 			PlayerID: i.Member.User.ID,
 		})
 		if err != nil {
-			msg = err.Error()
+			builder.WriteString(err.Error())
+		}
+
+		result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
+			GameID:   i.ChannelID,
+			PlayerID: i.Member.User.ID,
+		})
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				builder.WriteString("Your tab is paid off!")
+			} else {
+				builder.WriteString(err.Error())
+			}
+		} else {
+			builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
 		}
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: msg,
+				Content: builder.String(),
 			},
 		})
 		if err != nil {
