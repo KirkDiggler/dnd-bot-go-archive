@@ -313,6 +313,10 @@ func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput
 		PlayerID: input.PlayerID,
 	})
 	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			return nil, internal.ErrTabEmpty
+		}
+
 		return nil, err
 	}
 

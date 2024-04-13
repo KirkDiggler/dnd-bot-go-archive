@@ -224,6 +224,10 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 
 	count, err := r.client.LLen(ctx, tabKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, internal.ErrRecordNotFound
+		}
+
 		return nil, err
 	}
 
@@ -233,6 +237,8 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 }
 
 func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOutput, error) {
+	// the idea of paying a drink does not belong in the repo.
+	// this should be moved up a layer
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
