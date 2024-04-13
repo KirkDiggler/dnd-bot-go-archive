@@ -183,12 +183,17 @@ func (m *Manager) AddRolls(ctx context.Context, input *AddRollsInput) (*AddRolls
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	if input.Rolls == nil {
-		return nil, dnderr.NewMissingParameterError("input.Rolls")
+	if input.RollCount <= 0 {
+		return nil, dnderr.NewInvalidParameterError("input.RollCount must be greater than 0. Your value was:", input.RollCount)
 	}
 
-	results := make([]*RollResult, len(input.Rolls))
-	for i, roll := range input.Rolls {
+	rolls := make([]int, input.RollCount)
+	for i := 0; i < input.RollCount; i++ {
+		rolls[i] = rand.Intn(6) + 1
+	}
+
+	results := make([]*RollResult, len(rolls))
+	for i, roll := range rolls {
 		addRollOutput, err := m.AddRoll(ctx, &AddRollInput{
 			GameID:   input.GameID,
 			PlayerID: input.PlayerID,

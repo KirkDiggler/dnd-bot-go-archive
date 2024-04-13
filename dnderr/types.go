@@ -1,5 +1,7 @@
 package dnderr
 
+import "fmt"
+
 type MissingParameterError struct {
 	Param string
 }
@@ -65,9 +67,9 @@ func (e *InvalidParameterError) Error() string {
 	return "Invalid parameter: " + e.Param + " - " + e.Msg
 }
 
-func NewInvalidParameterError(param, msg string) error {
+func NewInvalidParameterError(param string, msg interface{}) error {
 	return &InvalidParameterError{
 		Param: param,
-		Msg:   msg,
+		Msg:   fmt.Sprintf("%+v", msg),
 	}
 }

@@ -51,7 +51,11 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 }
 
 func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	roll := rand.Intn(6) + 1
+	// if the roll count is greater than 5 return invalid input response
+	if i.ApplicationCommandData().Options[0].Options[0].IntValue() > 5 {
+		c.returnInvalidInputResponse(s, i)
+		return
+	}
 
 	numberOfRolls := i.ApplicationCommandData().Options[0].Options[0].IntValue()
 	rolls := make([]int, numberOfRolls)
@@ -66,9 +70,9 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 	c.messageID = i.Token
 
 	gameResult, err := c.manager.AddRolls(context.Background(), &ronnied_actions.AddRollsInput{
-		GameID:   i.ChannelID,
-		PlayerID: i.Member.User.ID,
-		Rolls:    rolls,
+		GameID:    i.ChannelID,
+		PlayerID:  i.Member.User.ID,
+		RollCount: int(numberOfRolls),
 	})
 	if err != nil {
 		log.Print(err)
@@ -86,36 +90,50 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	msgBuilder.WriteString(fmt.Sprintf("%s rolled %d times\n", i.Member.User.Username, numberOfRolls))
-	msgBuilder.WriteString("Results:\n")
-	for idx, roll := range rolls {
-		msgBuilder.WriteString(fmt.Sprintf("Roll %d: %d\n", idx+1, roll))
-	}
 
 	slog.Info("Game Result", "gameResult", gameResult)
 	if gameResult != nil && gameResult.Success {
-		for _, result := range gameResult.Results {
+		for idx, result := range gameResult.Results {
 			if result == nil {
+				slog.Warn("Result is nil")
 				continue
 			}
 
-			if result.PlayerID == "" || result.AssignedTo == "" {
-				slog.Warn("Missing playerID or assignedTo", "result", result)
+			if result.PlayerID == "" {
+				slog.Warn("Missing playerID", "result", result)
 
+				msgBuilder.WriteString("MISSING DATA\n")
+				// return error if this happens. fail fast
 				continue
 			}
 
-			user, userErr := s.User(result.AssignedTo)
-			if userErr != nil {
-				log.Print(userErr)
-				return
-			}
+			msgBuilder.WriteString(fmt.Sprintf("Roll %d: ", idx+1))
 
-			msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d and the drink was assigned to %s\n",
-				i.Member.User.Username, result.Roll,
-				user.Username))
+			switch result.Roll {
+			case 1:
+				// TODO: create grabbag to select responses here
+				// /ronnied addfail {msg}
+				msgBuilder.WriteString("that's a drink\n")
+			case 6:
+				if result.AssignedTo == "" {
+					slog.Warn("Missing assignedTo", "result", result)
+
+					msgBuilder.WriteString("MISSING DATA\n")
+					continue
+				}
+
+				user, userErr := s.User(result.AssignedTo)
+				if userErr != nil {
+					log.Print(userErr)
+					return
+				}
+
+				msgBuilder.WriteString(fmt.Sprintf("Crit! Drink passed to %s\n", user.Username))
+			default:
+				// respond with trumpet emoji
+				msgBuilder.WriteString("🎺🎺sad truimpet noise🎺🎺\n")
+			}
 		}
-
-		slog.Info("Message", "message", msgBuilder.String())
 
 		response = &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -124,6 +142,8 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 			},
 		}
 	} else {
+		roll := rand.Intn(6) + 1
+
 		if roll == 6 {
 			msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
 			response = &discordgo.InteractionResponse{
@@ -166,6 +186,18 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+func (c *RonnieD) returnInvalidInputResponse(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Invalid input",
+		},
+	})
 	if err != nil {
 		log.Print(err)
 	}

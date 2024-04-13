@@ -28,9 +28,9 @@ type RollResult struct {
 }
 
 type AddRollsInput struct {
-	GameID   string
-	PlayerID string
-	Rolls    []int
+	GameID    string
+	PlayerID  string
+	RollCount int
 }
 
 type AddRollsOutput struct {
