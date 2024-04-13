@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
 	"github.com/redis/go-redis/v9"
@@ -338,6 +339,10 @@ func (m *Manager) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrink
 		PlayerID: input.PlayerID,
 	})
 	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			return nil, internal.ErrTabEmpty
+		}
+
 		return nil, err
 	}
 

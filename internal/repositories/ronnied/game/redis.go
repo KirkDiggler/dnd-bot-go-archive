@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/redis/go-redis/v9"
@@ -248,6 +249,9 @@ func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOu
 
 	entryID, err := r.client.LPop(ctx, tabKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, internal.ErrRecordNotFound
+		}
 		return nil, err
 	}
 

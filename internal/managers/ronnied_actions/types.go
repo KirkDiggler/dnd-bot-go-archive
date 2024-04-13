@@ -63,7 +63,9 @@ type PayDrinkInput struct {
 	PlayerID string
 }
 
-type PayDrinkOutput struct{}
+type PayDrinkOutput struct {
+	TabRemaining int
+}
 
 type ListTabsInput struct {
 	GameID string
