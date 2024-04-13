@@ -8,6 +8,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
 	"github.com/redis/go-redis/v9"
 	"log"
+	"log/slog"
 	"math/rand"
 	"strings"
 
@@ -47,6 +48,127 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 	}
 
 	c.RonnieRoll(s, i)
+}
+
+func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	roll := rand.Intn(6) + 1
+
+	numberOfRolls := i.ApplicationCommandData().Options[0].Options[0].IntValue()
+	rolls := make([]int, numberOfRolls)
+	for idx := int64(0); idx < numberOfRolls; idx++ {
+		rolls[idx] = rand.Intn(6) + 1
+	}
+
+	slog.Info("Rolls", "rolls", rolls)
+
+	msgBuilder := strings.Builder{}
+	var response *discordgo.InteractionResponse
+	c.messageID = i.Token
+
+	gameResult, err := c.manager.AddRolls(context.Background(), &ronnied_actions.AddRollsInput{
+		GameID:   i.ChannelID,
+		PlayerID: i.Member.User.ID,
+		Rolls:    rolls,
+	})
+	if err != nil {
+		log.Print(err)
+
+		response = &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: err.Error(),
+			},
+		}
+		err = s.InteractionRespond(i.Interaction, response)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+	msgBuilder.WriteString(fmt.Sprintf("%s rolled %d times\n", i.Member.User.Username, numberOfRolls))
+	msgBuilder.WriteString("Results:\n")
+	for idx, roll := range rolls {
+		msgBuilder.WriteString(fmt.Sprintf("Roll %d: %d\n", idx+1, roll))
+	}
+
+	slog.Info("Game Result", "gameResult", gameResult)
+	if gameResult != nil && gameResult.Success {
+		for _, result := range gameResult.Results {
+			if result == nil {
+				continue
+			}
+
+			if result.PlayerID == "" || result.AssignedTo == "" {
+				slog.Warn("Missing playerID or assignedTo", "result", result)
+
+				continue
+			}
+
+			user, userErr := s.User(result.AssignedTo)
+			if userErr != nil {
+				log.Print(userErr)
+				return
+			}
+
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d and the drink was assigned to %s\n",
+				i.Member.User.Username, result.Roll,
+				user.Username))
+		}
+
+		slog.Info("Message", "message", msgBuilder.String())
+
+		response = &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msgBuilder.String(),
+			},
+		}
+	} else {
+		if roll == 6 {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a Crit! Pass a drink", i.Member.User.Username))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+					Components: []discordgo.MessageComponent{
+						&discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								&discordgo.Button{
+									Label:    "Roll it back",
+									Style:    discordgo.SuccessButton,
+									CustomID: ronnieRollBack,
+									Emoji: &discordgo.ComponentEmoji{
+										Name: "🍺",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		} else if roll == 1 {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a 1, that's a drink!", i.Member.User.Username))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+				},
+			}
+		} else {
+			msgBuilder.WriteString(fmt.Sprintf("%s rolled a %d, try again", i.Member.User.Username, roll))
+			response = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: msgBuilder.String(),
+				},
+			}
+		}
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Print(err)
+	}
 }
 
 func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -106,7 +228,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 									Label:    "Roll it back",
 									Style:    discordgo.SuccessButton,
 									CustomID: ronnieRollBack,
-									Emoji: discordgo.ComponentEmoji{
+									Emoji: &discordgo.ComponentEmoji{
 										Name: "🍺",
 									},
 								},
@@ -128,7 +250,7 @@ func (c *RonnieD) RonnieRoll(s *discordgo.Session, i *discordgo.InteractionCreat
 									Label:    "Roll it back",
 									Style:    discordgo.DangerButton,
 									CustomID: ronnieRollBack,
-									Emoji: discordgo.ComponentEmoji{
+									Emoji: &discordgo.ComponentEmoji{
 										Name: "🍺",
 									},
 								},
@@ -238,6 +360,8 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.ListTabs(s, i)
 			case "roll":
 				c.RonnieRoll(s, i)
+			case "rolls":
+				c.RonnieRolls(s, i)
 			case "drink":
 				c.PayDrink(s, i)
 			case "advise":
@@ -479,6 +603,18 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "roll",
 				Description: "roll em!",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "rolls",
+				Description: "Rolls for RonnieD",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "number",
+						Description: "How many rolls to make",
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Required:    true,
+					},
+				},
 			}, {
 				Name:        "advise",
 				Description: "what should I do RonnieD?",

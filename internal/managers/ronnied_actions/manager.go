@@ -170,7 +170,7 @@ func (m *Manager) ListTabs(ctx context.Context, input *ListTabsInput) (*ListTabs
 	}, nil
 }
 
-func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOutput, error) {
+func (m *Manager) AddRolls(ctx context.Context, input *AddRollsInput) (*AddRollsOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
@@ -183,21 +183,73 @@ func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOut
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
+	if input.Rolls == nil {
+		return nil, dnderr.NewMissingParameterError("input.Rolls")
+	}
+
+	results := make([]*RollResult, len(input.Rolls))
+	for i, roll := range input.Rolls {
+		addRollResult, err := m.AddRoll(ctx, &AddRollInput{
+			GameID:   input.GameID,
+			PlayerID: input.PlayerID,
+			Roll:     roll,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if addRollResult.Success {
+			results[i] = &RollResult{
+				PlayerID:   input.PlayerID,
+				AssignedTo: addRollResult.AssignedTo,
+				Roll:       roll,
+			}
+		} else {
+			results[i] = &RollResult{
+				PlayerID:   input.PlayerID,
+				AssignedTo: "",
+				Roll:       roll,
+			}
+		}
+	}
+
+	return &AddRollsOutput{
+		Results: results,
+		Success: len(results) > 0,
+	}, nil
+}
+
+func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+	gameResult, err := m.gameRepo.Get(ctx, &game.GetInput{
+		ID: input.GameID,
+	})
+	if err != nil {
+		slog.Info("gameRepo.Get", "error", err)
+
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if !gameResult.Game.HasPlayer(input.PlayerID) {
+		return &AddRollOutput{}, nil
+	}
+
 	// TODO: check if the player is in the game
 	// Make sure there is 1 other player in the game
 	if shouldAddEntry(input.Roll) {
 		var assignedTo = input.PlayerID
 
 		if input.Roll == 6 {
-			gameResult, err := m.gameRepo.Get(ctx, &game.GetInput{
-				ID: input.GameID,
-			})
-			if err != nil {
-				slog.Info("gameRepo.Get", "error", err)
-
-				return nil, fmt.Errorf("failed to get game: %w", err)
-			}
-
 			if gameResult.Game.Players == nil || len(gameResult.Game.Players) < 2 {
 				return nil, dnderr.NewInvalidEntityError("game must have at least 2 players")
 			}

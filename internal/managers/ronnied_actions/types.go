@@ -21,6 +21,23 @@ type JoinGameInput struct {
 type JoinGameOutput struct {
 }
 
+type RollResult struct {
+	PlayerID   string
+	AssignedTo string
+	Roll       int
+}
+
+type AddRollsInput struct {
+	GameID   string
+	PlayerID string
+	Rolls    []int
+}
+
+type AddRollsOutput struct {
+	Results []*RollResult
+	Success bool
+}
+
 type AddRollInput struct {
 	GameID   string
 	PlayerID string

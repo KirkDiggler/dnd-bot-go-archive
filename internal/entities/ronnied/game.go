@@ -14,6 +14,16 @@ type Game struct {
 	Players   []string   `json:"players"`
 }
 
+func (g *Game) HasPlayer(playerID string) bool {
+	for _, player := range g.Players {
+		if player == playerID {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (g *Game) String() string {
 	return fmt.Sprintf("Game{ID: %s, Name: %s, StartedAt: %s}", g.ID, g.Name, g.StartedAt)
 }

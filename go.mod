@@ -3,7 +3,7 @@ module github.com/KirkDiggler/dnd-bot-go
 go 1.22
 
 require (
-	github.com/bwmarrin/discordgo v0.27.1
+	github.com/bwmarrin/discordgo v0.28.1
 	github.com/fadedpez/dnd5e-api v0.0.0-20230205072901-b67777537667
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.1
