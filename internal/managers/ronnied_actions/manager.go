@@ -133,6 +133,43 @@ func (m *Manager) JoinGame(ctx context.Context, input *JoinGameInput) (*JoinGame
 	return &JoinGameOutput{}, nil
 }
 
+func (m *Manager) ListTabs(ctx context.Context, input *ListTabsInput) (*ListTabsOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	gameResult, err := m.gameRepo.Get(ctx, &game.GetInput{
+		ID: input.GameID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tabs := make([]*ronnied.Tab, 0)
+	for _, player := range gameResult.Game.Players {
+		tabCount, err := m.GetTab(ctx, &GetTabInput{
+			GameID:   input.GameID,
+			PlayerID: player,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		tabs = append(tabs, &ronnied.Tab{
+			PlayerID: player,
+			Count:    tabCount.Count,
+		})
+	}
+
+	return &ListTabsOutput{
+		Tabs: tabs,
+	}, nil
+}
+
 func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -167,7 +204,6 @@ func (m *Manager) AddRoll(ctx context.Context, input *AddRollInput) (*AddRollOut
 
 			// select a random membership for the game
 			availableMemberships := make([]string, 0)
-
 			for _, membership := range gameResult.Game.Players {
 				if membership != input.PlayerID {
 					availableMemberships = append(availableMemberships, membership)

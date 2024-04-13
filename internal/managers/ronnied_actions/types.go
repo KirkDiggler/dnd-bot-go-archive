@@ -47,3 +47,11 @@ type PayDrinkInput struct {
 }
 
 type PayDrinkOutput struct{}
+
+type ListTabsInput struct {
+	GameID string
+}
+
+type ListTabsOutput struct {
+	Tabs []*ronnied.Tab
+}

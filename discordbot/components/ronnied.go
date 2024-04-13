@@ -230,13 +230,15 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 		switch i.ApplicationCommandData().Name {
 		case "ronnied":
 			switch i.ApplicationCommandData().Options[0].Name {
-			case "joingame":
+			case "gamejoin":
 				c.JoinGame(s, i)
 			case "gettab":
 				c.GetTab(s, i)
+			case "tabs":
+				c.ListTabs(s, i)
 			case "roll":
 				c.RonnieRoll(s, i)
-			case "paydrink":
+			case "drink":
 				c.PayDrink(s, i)
 			case "advise":
 				grabBag := []string{
@@ -296,6 +298,49 @@ func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
+func (c *RonnieD) ListTabs(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	msg := strings.Builder{}
+
+	if data.Options[0].Name == "tabs" {
+		result, err := c.manager.ListTabs(context.Background(), &ronnied_actions.ListTabsInput{
+			GameID: i.ChannelID,
+		})
+		if err != nil {
+			log.Print(err)
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: err.Error(),
+				},
+			})
+			if err != nil {
+				log.Print(err)
+			}
+			return
+		}
+
+		for _, tab := range result.Tabs {
+			user, userErr := s.User(tab.PlayerID)
+			if userErr != nil {
+				log.Print(userErr)
+			}
+
+			msg.WriteString(fmt.Sprintf("Player: %s: %d\n", user.Username, tab.Count))
+		}
+
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg.String(),
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
 // AddResult adds a result to a game
 // TODO: move to the roll command.  All rolls should be sent and based on the success response we will send a message
 func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -330,55 +375,53 @@ func (c *RonnieD) AddResult(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	data := i.ApplicationCommandData()
-	if data.Options[0].Name == "paydrink" {
-		gameID := i.ChannelID
-		// Get the channel name
+	gameID := i.ChannelID
+	// Get the channel name
 
-		builder := strings.Builder{}
-		builder.WriteString("You paid a drink on your tab. ")
+	builder := strings.Builder{}
+	builder.WriteString("You paid a drink on your tab. ")
 
-		_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
-			GameID:   gameID,
-			PlayerID: i.Member.User.ID,
-		})
-		if err != nil {
+	_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+		GameID:   gameID,
+		PlayerID: i.Member.User.ID,
+	})
+	if err != nil {
+		builder.WriteString(err.Error())
+	}
+
+	result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
+		GameID:   i.ChannelID,
+		PlayerID: i.Member.User.ID,
+	})
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			builder.WriteString("Your tab is paid off!")
+		} else {
 			builder.WriteString(err.Error())
 		}
-
-		result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
-			GameID:   i.ChannelID,
-			PlayerID: i.Member.User.ID,
-		})
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				builder.WriteString("Your tab is paid off!")
-			} else {
-				builder.WriteString(err.Error())
-			}
+	} else {
+		if result.Count == 0 {
+			builder.WriteString("Your tab is paid off!")
 		} else {
-			if result.Count == 0 {
-				builder.WriteString("Your tab is paid off!")
-			} else {
-				builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
-			}
-		}
-
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: builder.String(),
-			},
-		})
-		if err != nil {
-			log.Print(err)
+			builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
 		}
 	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: builder.String(),
+		},
+	})
+	if err != nil {
+		log.Print(err)
+	}
+
 }
 
 func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
-	if data.Options[0].Name == "joingame" {
+	if data.Options[0].Name == "gamejoin" {
 		gameID := i.ChannelID
 		// Get the channel name
 		channel, err := s.Channel(i.ChannelID)
@@ -441,28 +484,20 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Description: "what should I do RonnieD?",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
-				Name:        "joingame",
+				Name:        "gamejoin",
 				Description: "Join a game",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			}, {
-				Name:        "addresult",
-				Description: "Add a result to a game",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "gameid",
-						Description: "ID of the game",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-				},
 			}, {
 				Name:        "gettab",
 				Description: "Get your tab",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
-				Name:        "paydrink",
-				Description: "Pay your tab",
+				Name:        "tabs",
+				Description: "List all tabs for this channel",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "drink",
+				Description: "drink your tab",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},

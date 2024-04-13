@@ -54,3 +54,8 @@ type GameTab struct {
 	PlayerID    string `json:"player_id"`
 	GameEntryID string `json:"game_entry_id"`
 }
+
+type Tab struct {
+	PlayerID string `json:"player_id"`
+	Count    int    `json:"count"`
+}
