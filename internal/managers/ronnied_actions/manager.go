@@ -189,7 +189,7 @@ func (m *Manager) AddRolls(ctx context.Context, input *AddRollsInput) (*AddRolls
 
 	results := make([]*RollResult, len(input.Rolls))
 	for i, roll := range input.Rolls {
-		addRollResult, err := m.AddRoll(ctx, &AddRollInput{
+		addRollOutput, err := m.AddRoll(ctx, &AddRollInput{
 			GameID:   input.GameID,
 			PlayerID: input.PlayerID,
 			Roll:     roll,
@@ -198,24 +198,21 @@ func (m *Manager) AddRolls(ctx context.Context, input *AddRollsInput) (*AddRolls
 			return nil, err
 		}
 
-		if addRollResult.Success {
-			results[i] = &RollResult{
-				PlayerID:   input.PlayerID,
-				AssignedTo: addRollResult.AssignedTo,
-				Roll:       roll,
-			}
-		} else {
-			results[i] = &RollResult{
-				PlayerID:   input.PlayerID,
-				AssignedTo: "",
-				Roll:       roll,
-			}
+		rollResult := &RollResult{
+			PlayerID: input.PlayerID,
+			Roll:     roll,
 		}
+
+		if addRollOutput.Success {
+			rollResult.AssignedTo = addRollOutput.AssignedTo
+		}
+
+		results[i] = rollResult
 	}
 
 	return &AddRollsOutput{
 		Results: results,
-		Success: len(results) > 0,
+		Success: len(results) > 0, // this cant happen rig
 	}, nil
 }
 
