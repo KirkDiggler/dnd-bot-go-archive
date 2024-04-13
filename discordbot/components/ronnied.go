@@ -53,7 +53,7 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// if the roll count is greater than 5 return invalid input response
 	if i.ApplicationCommandData().Options[0].Options[0].IntValue() > 5 {
-		c.returnSlowDownCowboyResponse(s, i)
+		c.returnResponseMessage("Whoa there 🤠, slow down. 5 rolls max!", s, i)
 		return
 	}
 
@@ -191,11 +191,11 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 }
 
-func (c *RonnieD) returnSlowDownCowboyResponse(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *RonnieD) returnResponseMessage(responseMessage string, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Whoa there 🤠, slow down. 5 rolls max!",
+			Content: responseMessage,
 		},
 	})
 	if err != nil {
