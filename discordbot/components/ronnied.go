@@ -111,7 +111,7 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 
 			switch result.Roll {
 			case 1:
-				msgBuilder.WriteString(grabbed)
+				msgBuilder.WriteString(fmt.Sprintf("%s ノ( ゜-゜ノ)", grabbed))
 			case 6:
 				if result.AssignedTo == "" {
 					slog.Warn("Missing assignedTo", "result", result)
@@ -127,7 +127,7 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 					return
 				}
 
-				msgBuilder.WriteString(fmt.Sprintf("%s %sノ( ゜-゜ノ)", grabbed, user.Username))
+				msgBuilder.WriteString(fmt.Sprintf("ヽ(゜-゜ )ノ\n%s %s", grabbed, user.Username))
 			default:
 				// respond with trumpet emoji
 				msgBuilder.WriteString("*sad trumpet*")
