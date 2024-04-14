@@ -57,7 +57,7 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	numberOfRolls := i.ApplicationCommandData().Options[0].Options[0].IntValue()
 	rolls := make([]int, numberOfRolls)
-	for idx := int64(0); idx < numberOfRolls; idx++ {
+	for idx := 0; idx < int(numberOfRolls); idx++ {
 		rolls[idx] = rand.Intn(6) + 1
 	}
 
@@ -89,7 +89,6 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	msgBuilder.WriteString(fmt.Sprintf("%s rolled %d times\n", i.Member.User.Username, numberOfRolls))
 
-	slog.Info("Game Result", "gameResult", gameResult)
 	if gameResult != nil && gameResult.Success {
 		for _, result := range gameResult.Results {
 			if result == nil {

@@ -306,8 +306,6 @@ func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	slog.Info("GetTab", "input", input)
-
 	result, err := m.gameRepo.GetTab(ctx, &game.GetTabInput{
 		GameID:   input.GameID,
 		PlayerID: input.PlayerID,

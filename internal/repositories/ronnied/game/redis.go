@@ -59,8 +59,6 @@ func (r *Redis) Get(ctx context.Context, input *GetInput) (*GetOutput, error) {
 		return nil, err
 	}
 
-	slog.Info("Get ", "game", game.String())
-
 	return &GetOutput{
 		Game: game,
 	}, nil
