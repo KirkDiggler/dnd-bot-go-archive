@@ -91,7 +91,7 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	slog.Info("Game Result", "gameResult", gameResult)
 	if gameResult != nil && gameResult.Success {
-		for idx, result := range gameResult.Results {
+		for _, result := range gameResult.Results {
 			if result == nil {
 				slog.Warn("Result is nil")
 				continue
@@ -105,18 +105,20 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 				continue
 			}
 
-			msgBuilder.WriteString(fmt.Sprintf("Roll %d: ", idx+1))
+			msgBuilder.WriteString(fmt.Sprintf("🎲: **%d** ", result.Roll))
+			// TODO: create grabbag from user input generate this list (load from file, seeding process?)
+			bag := []string{"🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺"}
+			grabbed := bag[rand.Intn(len(bag))] // this will be unique per row
 
 			switch result.Roll {
 			case 1:
-				// TODO: create grabbag to select responses here
-				// /ronnied addfail {msg}
-				msgBuilder.WriteString("that's a drink\n")
+				msgBuilder.WriteString(grabbed)
 			case 6:
 				if result.AssignedTo == "" {
 					slog.Warn("Missing assignedTo", "result", result)
 
-					msgBuilder.WriteString("MISSING DATA\n")
+					// TODO: move to constant
+					msgBuilder.WriteString("sir... sir I am missing data (check logs)")
 					continue
 				}
 
@@ -126,11 +128,14 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 					return
 				}
 
-				msgBuilder.WriteString(fmt.Sprintf("Crit! Drink passed to %s\n", user.Username))
+				msgBuilder.WriteString(fmt.Sprintf("%s %sノ( ゜-゜ノ)", grabbed, user.Username))
 			default:
 				// respond with trumpet emoji
-				msgBuilder.WriteString("🎺🎺sad truimpet noise🎺🎺\n")
+				msgBuilder.WriteString("*sad trumpet*")
 			}
+
+			msgBuilder.WriteString("\n")
+
 		}
 
 		response = &discordgo.InteractionResponse{

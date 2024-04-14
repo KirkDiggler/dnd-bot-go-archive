@@ -256,8 +256,11 @@ func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOu
 	entryID, err := r.client.LPop(ctx, tabKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
+			slog.Error("PayDrink", "incoming-error", err.Error())
+
 			return nil, internal.ErrRecordNotFound
 		}
+
 		return nil, err
 	}
 
