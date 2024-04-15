@@ -127,7 +127,7 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 					return
 				}
 
-				msgBuilder.WriteString(fmt.Sprintf("ヽ(゜-゜ )ノ\n%s %s", grabbed, user.Username))
+				msgBuilder.WriteString(fmt.Sprintf("ヽ(゜-゜ )ノ %s %s", grabbed, user.Username))
 			default:
 				// respond with trumpet emoji
 				msgBuilder.WriteString("*sad trumpet*")
