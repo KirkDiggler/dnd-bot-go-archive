@@ -348,7 +348,19 @@ func (m *Manager) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrink
 		return nil, err
 	}
 
-	return &PayDrinkOutput{}, nil
+	tab := &GetTabInput{
+		GameID:   input.GameID,
+		PlayerID: input.PlayerID,
+	}
+
+	tabResult, err := m.GetTab(ctx, tab)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PayDrinkOutput{
+		TabRemaining: tabResult.Count,
+	}, nil
 
 }
 
