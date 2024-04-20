@@ -709,14 +709,18 @@ func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate)
 	// Get the channel name
 
 	builder := strings.Builder{}
-	builder.WriteString("Prepare to drink \n\n...\n\n")
+	builder.WriteString("Prepare to drink \n...\n")
 
-	_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+	result, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
 		GameID:   gameID,
 		PlayerID: i.Member.User.ID,
 	})
 	if err != nil {
 		builder.WriteString(err.Error())
+	} else {
+
+		builder.WriteString("Good drink, good drink\n...\n")
+		builder.WriteString(fmt.Sprintf("Your tab is now %d", result.TabRemaining))
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
