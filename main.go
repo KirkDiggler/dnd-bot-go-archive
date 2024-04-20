@@ -40,7 +40,7 @@ func init() {
 		"Guild ID")
 	flag.StringVar(&appID, "app", "",
 		"Application ID")
-	flag.StringVar(&redistHost, "redis", "localhost:6379",
+	flag.StringVar(&redistHost, "redis", "10.0.0.53:6379",
 		"Redis host")
 	flag.Parse()
 

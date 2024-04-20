@@ -13,7 +13,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const ronnieRollBack = "ronnie-roll-back"
+const (
+	ronnieRollBack    = "ronnie-roll-back"
+	ronnieActionRoll  = "ronnie-action-roll"
+	ronniActionPayTab = "ronnie-action-pay-tab"
+)
 
 type RonnieD struct {
 	messageID string
@@ -134,7 +138,6 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 			}
 
 			msgBuilder.WriteString("\n")
-
 		}
 
 		response = &discordgo.InteractionResponse{
@@ -380,12 +383,180 @@ func (c *RonnieD) HandleMessageCreate(s *discordgo.Session, m *discordgo.Message
 	}
 }
 
+func (c *RonnieD) processRolls(s *discordgo.Session, i *discordgo.InteractionCreate) string {
+	numberOfRolls := 5
+
+	rolls := make([]int, numberOfRolls)
+	for idx := 0; idx < int(numberOfRolls); idx++ {
+		rolls[idx] = rand.Intn(6) + 1
+	}
+
+	slog.Info("Rolls", "rolls", rolls)
+
+	msgBuilder := strings.Builder{}
+	var response *discordgo.InteractionResponse
+	c.messageID = i.Token
+
+	gameResult, err := c.manager.AddRolls(context.Background(), &ronnied_actions.AddRollsInput{
+		GameID:    i.ChannelID,
+		PlayerID:  i.Member.User.ID,
+		RollCount: int(numberOfRolls),
+	})
+	if err != nil {
+		log.Print(err)
+
+		response = &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: err.Error(),
+			},
+		}
+		err = s.InteractionRespond(i.Interaction, response)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+	msgBuilder.WriteString(fmt.Sprintf("%s rolled %d times\n", i.Member.User.Username, numberOfRolls))
+
+	if gameResult != nil && gameResult.Success {
+		for _, result := range gameResult.Results {
+			if result == nil {
+				slog.Warn("Result is nil")
+				continue
+			}
+
+			if result.PlayerID == "" {
+				slog.Warn("Missing playerID", "result", result)
+
+				msgBuilder.WriteString("MISSING DATA\n")
+				// return error if this happens. fail fast
+				continue
+			}
+
+			msgBuilder.WriteString(fmt.Sprintf("🎲: **%d** ", result.Roll))
+			// TODO: create grabbag from user input generate this list (load from file, seeding process?)
+			bag := []string{"🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺"}
+			grabbed := bag[rand.Intn(len(bag))] // this will be unique per row
+
+			switch result.Roll {
+			case 1:
+				msgBuilder.WriteString(fmt.Sprintf("%s ノ( ゜-゜ノ)", grabbed))
+			case 6:
+				if result.AssignedTo == "" {
+					slog.Warn("Missing assignedTo", "result", result)
+
+					// TODO: move to constant
+					msgBuilder.WriteString("sir... sir I am missing data (check logs)")
+					continue
+				}
+
+				user, userErr := s.User(result.AssignedTo)
+				if userErr != nil {
+					log.Print(userErr)
+					return userErr.Error()
+				}
+
+				msgBuilder.WriteString(fmt.Sprintf("ヽ(゜-゜ )ノ %s %s", grabbed, user.Username))
+			default:
+				// respond with trumpet emoji
+				msgBuilder.WriteString("*sad trumpet*")
+			}
+
+			msgBuilder.WriteString("\n")
+		}
+	}
+
+	return msgBuilder.String()
+}
+
+// Action sets up a new message that will have buttons for players to click to roll or pay their tab
+func (c *RonnieD) Action(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Print("Action", "type", i.Type)
+	if i.Type == discordgo.InteractionApplicationCommand {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Roll or pay your tab",
+				Components: []discordgo.MessageComponent{
+					&discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							&discordgo.Button{
+								Label:    "Roll",
+								Style:    discordgo.SuccessButton,
+								CustomID: ronnieActionRoll,
+							},
+							&discordgo.Button{
+								Label:    "Pay Tab",
+								Style:    discordgo.DangerButton,
+								CustomID: ronniActionPayTab,
+							},
+						},
+					},
+				},
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+// RonnieActionPayTab handles the action of paying a tab
+func (c *RonnieD) RonnieActionPayTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	gameID := i.ChannelID
+	// Get the channel name
+
+	builder := strings.Builder{}
+	builder.WriteString("Prepare to drink \n\n...\n\n")
+
+	_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+		GameID:   gameID,
+		PlayerID: i.Member.User.ID,
+	})
+	if err != nil {
+		builder.WriteString(err.Error())
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    builder.String(),
+			Components: i.Message.Components, // Ensure to resend components if they should still be interactive
+		},
+	})
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+// Define a function to handle button clicks or other component interactions
+func (c *RonnieD) RonnieActionRoll(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check the CustomID of the component to determine the specific action
+	switch i.MessageComponentData().CustomID {
+	case ronnieActionRoll:
+		msg := c.processRolls(s, i)
+
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Content:    msg,
+				Components: i.Message.Components, // Ensure to resend components if they should still be interactive
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		switch i.ApplicationCommandData().Name {
 		case "ronnied":
 			switch i.ApplicationCommandData().Options[0].Name {
+			case "action":
+				c.Action(s, i)
 			case "gamejoin":
 				c.JoinGame(s, i)
 			case "gettab":
@@ -424,6 +595,10 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 		switch i.MessageComponentData().CustomID {
 		case ronnieRollBack:
 			c.RollBack(s, i)
+		case ronnieActionRoll:
+			c.RonnieActionRoll(s, i)
+		case ronniActionPayTab:
+			c.RonnieActionPayTab(s, i)
 		}
 	}
 }
@@ -457,45 +632,42 @@ func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func (c *RonnieD) ListTabs(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	data := i.ApplicationCommandData()
 	msg := strings.Builder{}
 
-	if data.Options[0].Name == "tabs" {
-		result, err := c.manager.ListTabs(context.Background(), &ronnied_actions.ListTabsInput{
-			GameID: i.ChannelID,
-		})
-		if err != nil {
-			log.Print(err)
-			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: err.Error(),
-				},
-			})
-			if err != nil {
-				log.Print(err)
-			}
-			return
-		}
-
-		for _, tab := range result.Tabs {
-			user, userErr := s.User(tab.PlayerID)
-			if userErr != nil {
-				log.Print(userErr)
-			}
-
-			msg.WriteString(fmt.Sprintf("Player: %s: %d\n", user.Username, tab.Count))
-		}
-
+	result, err := c.manager.ListTabs(context.Background(), &ronnied_actions.ListTabsInput{
+		GameID: i.ChannelID,
+	})
+	if err != nil {
+		log.Print(err)
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: msg.String(),
+				Content: err.Error(),
 			},
 		})
 		if err != nil {
 			log.Print(err)
 		}
+		return
+	}
+
+	for _, tab := range result.Tabs {
+		user, userErr := s.User(tab.PlayerID)
+		if userErr != nil {
+			log.Print(userErr)
+		}
+
+		msg.WriteString(fmt.Sprintf("Player: %s: %d\n", user.Username, tab.Count))
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: msg.String(),
+		},
+	})
+	if err != nil {
+		log.Print(err)
 	}
 }
 
@@ -650,6 +822,10 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 			}, {
 				Name:        "drink",
 				Description: "drink your tab",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "action",
+				Description: "take action",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
