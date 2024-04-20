@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/redis/go-redis/v9"
@@ -57,8 +58,6 @@ func (r *Redis) Get(ctx context.Context, input *GetInput) (*GetOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	slog.Info("Get ", "game", game.String())
 
 	return &GetOutput{
 		Game: game,
@@ -223,6 +222,10 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 
 	count, err := r.client.LLen(ctx, tabKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, internal.ErrRecordNotFound
+		}
+
 		return nil, err
 	}
 
@@ -232,6 +235,8 @@ func (r *Redis) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, 
 }
 
 func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOutput, error) {
+	// the idea of paying a drink does not belong in the repo.
+	// this should be moved up a layer
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
@@ -248,6 +253,12 @@ func (r *Redis) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOu
 
 	entryID, err := r.client.LPop(ctx, tabKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			slog.Error("PayDrink", "incoming-error", err.Error())
+
+			return nil, internal.ErrRecordNotFound
+		}
+
 		return nil, err
 	}
 

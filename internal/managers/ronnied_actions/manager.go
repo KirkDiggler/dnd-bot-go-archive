@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
 	"github.com/redis/go-redis/v9"
@@ -305,13 +306,15 @@ func (m *Manager) GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	slog.Info("GetTab", "input", input)
-
 	result, err := m.gameRepo.GetTab(ctx, &game.GetTabInput{
 		GameID:   input.GameID,
 		PlayerID: input.PlayerID,
 	})
 	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			return nil, internal.ErrTabEmpty
+		}
+
 		return nil, err
 	}
 
@@ -338,10 +341,26 @@ func (m *Manager) PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrink
 		PlayerID: input.PlayerID,
 	})
 	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			return nil, internal.ErrTabEmpty
+		}
+
 		return nil, err
 	}
 
-	return &PayDrinkOutput{}, nil
+	tab := &GetTabInput{
+		GameID:   input.GameID,
+		PlayerID: input.PlayerID,
+	}
+
+	tabResult, err := m.GetTab(ctx, tab)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PayDrinkOutput{
+		TabRemaining: tabResult.Count,
+	}, nil
 
 }
 

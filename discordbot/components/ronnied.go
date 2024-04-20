@@ -2,11 +2,9 @@ package components
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
-	"github.com/redis/go-redis/v9"
 	"log"
 	"log/slog"
 	"math/rand"
@@ -53,13 +51,13 @@ func (c *RonnieD) RollBack(s *discordgo.Session, i *discordgo.InteractionCreate)
 func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// if the roll count is greater than 5 return invalid input response
 	if i.ApplicationCommandData().Options[0].Options[0].IntValue() > 5 {
-		c.returnSlowDownCowboyResponse(s, i)
+		c.returnResponseMessage("Whoa there 🤠, slow down. 5 rolls max!", s, i)
 		return
 	}
 
 	numberOfRolls := i.ApplicationCommandData().Options[0].Options[0].IntValue()
 	rolls := make([]int, numberOfRolls)
-	for idx := int64(0); idx < numberOfRolls; idx++ {
+	for idx := 0; idx < int(numberOfRolls); idx++ {
 		rolls[idx] = rand.Intn(6) + 1
 	}
 
@@ -91,9 +89,8 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	msgBuilder.WriteString(fmt.Sprintf("%s rolled %d times\n", i.Member.User.Username, numberOfRolls))
 
-	slog.Info("Game Result", "gameResult", gameResult)
 	if gameResult != nil && gameResult.Success {
-		for idx, result := range gameResult.Results {
+		for _, result := range gameResult.Results {
 			if result == nil {
 				slog.Warn("Result is nil")
 				continue
@@ -107,18 +104,20 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 				continue
 			}
 
-			msgBuilder.WriteString(fmt.Sprintf("Roll %d: ", idx+1))
+			msgBuilder.WriteString(fmt.Sprintf("🎲: **%d** ", result.Roll))
+			// TODO: create grabbag from user input generate this list (load from file, seeding process?)
+			bag := []string{"🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🥃", "🍸", "🍹", "🍾", "🥂", "🥤", "🧉", "🧊", "🥛", "🍼", "☕", "🫖", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺"}
+			grabbed := bag[rand.Intn(len(bag))] // this will be unique per row
 
 			switch result.Roll {
 			case 1:
-				// TODO: create grabbag to select responses here
-				// /ronnied addfail {msg}
-				msgBuilder.WriteString("that's a drink\n")
+				msgBuilder.WriteString(fmt.Sprintf("%s ノ( ゜-゜ノ)", grabbed))
 			case 6:
 				if result.AssignedTo == "" {
 					slog.Warn("Missing assignedTo", "result", result)
 
-					msgBuilder.WriteString("MISSING DATA\n")
+					// TODO: move to constant
+					msgBuilder.WriteString("sir... sir I am missing data (check logs)")
 					continue
 				}
 
@@ -128,11 +127,14 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 					return
 				}
 
-				msgBuilder.WriteString(fmt.Sprintf("Crit! Drink passed to %s\n", user.Username))
+				msgBuilder.WriteString(fmt.Sprintf("ヽ(゜-゜ )ノ %s %s", grabbed, user.Username))
 			default:
 				// respond with trumpet emoji
-				msgBuilder.WriteString("🎺🎺sad truimpet noise🎺🎺\n")
+				msgBuilder.WriteString("*sad trumpet*")
 			}
+
+			msgBuilder.WriteString("\n")
+
 		}
 
 		response = &discordgo.InteractionResponse{
@@ -191,11 +193,11 @@ func (c *RonnieD) RonnieRolls(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 }
 
-func (c *RonnieD) returnSlowDownCowboyResponse(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *RonnieD) returnResponseMessage(responseMessage string, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Whoa there 🤠, slow down. 5 rolls max!",
+			Content: responseMessage,
 		},
 	})
 	if err != nil {
@@ -535,32 +537,18 @@ func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate)
 	// Get the channel name
 
 	builder := strings.Builder{}
-	builder.WriteString("You paid a drink on your tab. ")
+	builder.WriteString("Prepare to drink \n...\n")
 
-	_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+	result, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
 		GameID:   gameID,
 		PlayerID: i.Member.User.ID,
 	})
 	if err != nil {
 		builder.WriteString(err.Error())
-	}
-
-	result, err := c.manager.GetTab(context.Background(), &ronnied_actions.GetTabInput{
-		GameID:   i.ChannelID,
-		PlayerID: i.Member.User.ID,
-	})
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			builder.WriteString("Your tab is paid off!")
-		} else {
-			builder.WriteString(err.Error())
-		}
 	} else {
-		if result.Count == 0 {
-			builder.WriteString("Your tab is paid off!")
-		} else {
-			builder.WriteString(fmt.Sprintf("Your tab is %d", result.Count))
-		}
+
+		builder.WriteString("Good drink, good drink\n...\n")
+		builder.WriteString(fmt.Sprintf("Your tab is now %d", result.TabRemaining))
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
