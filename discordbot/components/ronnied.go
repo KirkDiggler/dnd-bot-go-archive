@@ -472,7 +472,6 @@ func (c *RonnieD) processRolls(s *discordgo.Session, i *discordgo.InteractionCre
 
 // Action sets up a new message that will have buttons for players to click to roll or pay their tab
 func (c *RonnieD) Action(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Print("Action", "type", i.Type)
 	if i.Type == discordgo.InteractionApplicationCommand {
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -508,14 +507,18 @@ func (c *RonnieD) RonnieActionPayTab(s *discordgo.Session, i *discordgo.Interact
 	// Get the channel name
 
 	builder := strings.Builder{}
-	builder.WriteString("Prepare to drink \n\n...\n\n")
+	builder.WriteString(fmt.Sprintf("%s... Prepare to drink \n...\n", i.Member.User.Username))
 
-	_, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
+	result, err := c.manager.PayDrink(context.Background(), &ronnied_actions.PayDrinkInput{
 		GameID:   gameID,
 		PlayerID: i.Member.User.ID,
 	})
 	if err != nil {
 		builder.WriteString(err.Error())
+	} else {
+
+		builder.WriteString("Good drink, good drink\n...\n")
+		builder.WriteString(fmt.Sprintf("Your tab is now %d", result.TabRemaining))
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
