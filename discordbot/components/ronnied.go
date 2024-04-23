@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	ronnieRollBack    = "ronnie-roll-back"
-	ronnieActionRoll  = "ronnie-action-roll"
-	ronniActionPayTab = "ronnie-action-pay-tab"
+	ronnieRollBack       = "ronnie-roll-back"
+	ronnieActionRoll     = "ronnie-action-roll"
+	ronniActionPayTab    = "ronnie-action-pay-tab"
+	ronnieActionListTabs = "ronnie-action-list-tabs"
 )
 
 type RonnieD struct {
@@ -384,7 +385,7 @@ func (c *RonnieD) HandleMessageCreate(s *discordgo.Session, m *discordgo.Message
 }
 
 func (c *RonnieD) processRolls(s *discordgo.Session, i *discordgo.InteractionCreate) string {
-	numberOfRolls := 5
+	numberOfRolls := 1
 
 	rolls := make([]int, numberOfRolls)
 	for idx := 0; idx < int(numberOfRolls); idx++ {
@@ -489,6 +490,10 @@ func (c *RonnieD) Action(s *discordgo.Session, i *discordgo.InteractionCreate) {
 								Label:    "Pay Tab",
 								Style:    discordgo.DangerButton,
 								CustomID: ronniActionPayTab,
+							}, &discordgo.Button{
+								Label:    "List Tabs",
+								Style:    discordgo.PrimaryButton,
+								CustomID: ronnieActionListTabs,
 							},
 						},
 					},
@@ -552,6 +557,49 @@ func (c *RonnieD) RonnieActionRoll(s *discordgo.Session, i *discordgo.Interactio
 		}
 	}
 }
+
+func (c *RonnieD) RonnieActionListTabs(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	msg := strings.Builder{}
+
+	result, err := c.manager.ListTabs(context.Background(), &ronnied_actions.ListTabsInput{
+		GameID: i.ChannelID,
+	})
+	if err != nil {
+		log.Print(err)
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content:    err.Error(),
+				Components: i.Message.Components, // Ensure to resend components if they should still be interactive
+			},
+		})
+		if err != nil {
+			log.Print(err)
+		}
+		return
+	}
+
+	for _, tab := range result.Tabs {
+		user, userErr := s.User(tab.PlayerID)
+		if userErr != nil {
+			log.Print(userErr)
+		}
+
+		msg.WriteString(fmt.Sprintf("Player: %s: %d\n", user.Username, tab.Count))
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    msg.String(),
+			Components: i.Message.Components, // Ensure to resend components if they should still be interactive
+		},
+	})
+	if err != nil {
+		log.Print(err)
+	}
+}
+
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -602,6 +650,8 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 			c.RonnieActionRoll(s, i)
 		case ronniActionPayTab:
 			c.RonnieActionPayTab(s, i)
+		case ronnieActionListTabs:
+			c.RonnieActionListTabs(s, i)
 		}
 	}
 }
