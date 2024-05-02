@@ -849,18 +849,6 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Description: "roll em!",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
-				Name:        "rolls",
-				Description: "Rolls for RonnieD",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "number",
-						Description: "How many rolls to make",
-						Type:        discordgo.ApplicationCommandOptionInteger,
-						Required:    true,
-					},
-				},
-			}, {
 				Name:        "advise",
 				Description: "what should I do RonnieD?",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
@@ -871,14 +859,6 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 			}, {
 				Name:        "gettab",
 				Description: "Get your tab",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			}, {
-				Name:        "tabs",
-				Description: "List all tabs for this channel",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			}, {
-				Name:        "drink",
-				Description: "drink your tab",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
 				Name:        "action",
