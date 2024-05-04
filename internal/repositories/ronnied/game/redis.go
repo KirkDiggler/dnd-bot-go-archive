@@ -91,6 +91,7 @@ func (r *Redis) Create(ctx context.Context, input *CreateInput) (*CreateOutput, 
 		Game: input.Game,
 	}, nil
 }
+
 func (r *Redis) Leave(ctx context.Context, input *LeaveInput) (*LeaveOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
