@@ -51,6 +51,10 @@ func (r *Redis) Get(ctx context.Context, input *GetInput) (*GetOutput, error) {
 
 	gameJson, err := r.client.Get(ctx, gameKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, internal.ErrRecordNotFound
+		}
+
 		return nil, err
 	}
 

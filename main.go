@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/session"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
@@ -108,8 +109,16 @@ func main() {
 		panic(err)
 	}
 
+	sessionRepo, err := session.NewRedis(&session.Config{
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	gameActions, err := ronnied_actions.NewManager(&ronnied_actions.ManagerConfig{
-		GameRepo: gameRepo,
+		GameRepo:    gameRepo,
+		SessionRepo: sessionRepo,
 	})
 	if err != nil {
 		panic(err)

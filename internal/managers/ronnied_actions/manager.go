@@ -8,17 +8,20 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/session"
 	"github.com/redis/go-redis/v9"
 	"log/slog"
 	"math/rand"
 )
 
 type Manager struct {
-	gameRepo game.Interface
+	gameRepo    game.Interface
+	sessionRepo session.Interface
 }
 
 type ManagerConfig struct {
-	GameRepo game.Interface
+	GameRepo    game.Interface
+	SessionRepo session.Interface
 }
 
 func NewManager(cfg *ManagerConfig) (*Manager, error) {
@@ -30,8 +33,102 @@ func NewManager(cfg *ManagerConfig) (*Manager, error) {
 		return nil, dnderr.NewMissingParameterError("cfg.GameRepo")
 	}
 
+	if cfg.SessionRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.SessionRepo")
+	}
+
 	return &Manager{
-		gameRepo: cfg.GameRepo,
+		gameRepo:    cfg.GameRepo,
+		sessionRepo: cfg.SessionRepo,
+	}, nil
+}
+
+func (m *Manager) CreateSession(ctx context.Context, input *CreateSessionInput) (*CreateSessionOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	// check that this game exists
+	_, err := m.gameRepo.Get(ctx, &game.GetInput{
+		ID: input.GameID,
+	})
+	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			_, err = m.gameRepo.Create(ctx, &game.CreateInput{
+				Game: &ronnied.Game{
+					ID:   input.GameID,
+					Name: input.GameID,
+				}})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return nil, err
+	}
+
+	// create a session
+	result, err := m.sessionRepo.Create(ctx, &session.CreateInput{
+		GameID: input.GameID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateSessionOutput{
+		Session: result.Session,
+	}, nil
+}
+
+func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*JoinSessionOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+
+	// join the session
+	result, err := m.sessionRepo.Join(ctx, &session.JoinInput{
+		SessionID: input.SessionID,
+		PlayerID:  input.PlayerID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &JoinSessionOutput{
+		Session: result.Session,
+	}, nil
+}
+
+func (m *Manager) GetSession(ctx context.Context, input *GetSessionInput) (*GetSessionOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	result, err := m.sessionRepo.Get(ctx, &session.GetInput{
+		ID: input.SessionID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetSessionOutput{
+		Session: result.Session,
 	}, nil
 }
 

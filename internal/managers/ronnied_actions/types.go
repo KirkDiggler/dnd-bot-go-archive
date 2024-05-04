@@ -74,3 +74,28 @@ type ListTabsInput struct {
 type ListTabsOutput struct {
 	Tabs []*ronnied.Tab
 }
+
+type CreateSessionInput struct {
+	GameID string
+}
+
+type CreateSessionOutput struct {
+	Session *ronnied.Session
+}
+
+type JoinSessionInput struct {
+	SessionID string
+	PlayerID  string
+}
+
+type JoinSessionOutput struct {
+	Session *ronnied.Session
+}
+
+type GetSessionInput struct {
+	SessionID string
+}
+
+type GetSessionOutput struct {
+	Session *ronnied.Session
+}

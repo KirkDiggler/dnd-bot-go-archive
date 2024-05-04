@@ -9,4 +9,7 @@ type Interface interface {
 	GetTab(ctx context.Context, input *GetTabInput) (*GetTabOutput, error)
 	ListTabs(ctx context.Context, input *ListTabsInput) (*ListTabsOutput, error)
 	PayDrink(ctx context.Context, input *PayDrinkInput) (*PayDrinkOutput, error)
+	CreateSession(ctx context.Context, input *CreateSessionInput) (*CreateSessionOutput, error)
+	JoinSession(ctx context.Context, input *JoinSessionInput) (*JoinSessionOutput, error)
+	GetSession(ctx context.Context, input *GetSessionInput) (*GetSessionOutput, error)
 }
