@@ -614,7 +614,7 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.GetTab(s, i)
 			case "tabs":
 				c.ListTabs(s, i)
-			case "rollem:"
+			case "rollem":
 				c.RonnieRoll(s, i)
 			case "rolls":
 				c.RonnieRolls(s, i)
