@@ -614,7 +614,7 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.GetTab(s, i)
 			case "tabs":
 				c.ListTabs(s, i)
-			case "roll":
+			case "rollem:
 				c.RonnieRoll(s, i)
 			case "rolls":
 				c.RonnieRolls(s, i)
@@ -845,7 +845,7 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 		Description: "Leverage RonnieD's wisdom",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
-				Name:        "roll",
+				Name:        "rollem",
 				Description: "roll em!",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
