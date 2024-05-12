@@ -9,41 +9,63 @@ const (
 	RollTypeRollOff RollType = "roll_off"
 )
 
+type Player struct {
+	ID    string
+	MsgID string
+}
 type Session struct {
 	ID          string
-	MessageID   string
+	MessageID   string // TODO: move to SessionRoll
 	SessionDate *time.Time
 	GameID      string
-	Players     []string
+	Players     []*Player
 	StartedDate *time.Time
 }
 
-func (s *Session) HasPlayer(playerID string) bool {
+func (s *Session) HasPlayer(playerID string) *Player {
 	for _, player := range s.Players {
-		if player == playerID {
-			return true
+		if player.ID == playerID {
+			return player
 		}
 	}
 
-	return false
+	return nil
 }
 
 type SessionRoll struct {
 	ID        string
 	SessionID string
 	Type      RollType
-	Players   []string // players involved in this roll
+	Players   []*Player // players involved in this roll
 	Entries   []*SessionEntry
 }
 
-func (sr *SessionRoll) HasPlayer(playerID string) bool {
+func (sr *SessionRoll) HasPlayer(playerID string) *Player {
 	for _, player := range sr.Players {
-		if player == playerID {
-			return true
+		if player.ID == playerID {
+			return player
 		}
 	}
 
-	return false
+	return nil
+}
+
+func (sr *SessionRoll) HasPlayerEntry(playerID string) *SessionEntry {
+	for _, entry := range sr.Entries {
+		if entry.PlayerID == playerID {
+			return entry
+		}
+	}
+
+	return nil
+}
+
+func (sr *SessionRoll) UpdatePlayerMsgID(playerID, msgID string) {
+	for _, player := range sr.Players {
+		if player.ID == playerID {
+			player.MsgID = msgID
+		}
+	}
 }
 
 type SessionEntry struct {

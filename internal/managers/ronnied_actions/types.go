@@ -44,6 +44,15 @@ type AddRollInput struct {
 	Roll     int
 }
 
+type AssignDrinkInput struct {
+	GameID        string
+	PlayerID      string
+	SessionRollID string
+	AssignedTo    string
+}
+
+type AssignDrinkOutput struct{}
+
 type AddRollOutput struct {
 	AssignedTo string
 	Success    bool
@@ -116,7 +125,8 @@ type JoinSessionInput struct {
 }
 
 type JoinSessionOutput struct {
-	Session *ronnied.Session
+	Session     *ronnied.Session
+	SessionRoll *ronnied.SessionRoll
 }
 
 type AddSessionRollInput struct {
@@ -126,6 +136,14 @@ type AddSessionRollInput struct {
 
 type AddSessionRollOutput struct {
 	SessionEntry *ronnied.SessionEntry
+}
+
+type UpdateSessionRollInput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type UpdateSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
 }
 
 type GetSessionInput struct {

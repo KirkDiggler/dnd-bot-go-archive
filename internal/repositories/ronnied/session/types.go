@@ -54,6 +54,13 @@ type CreateRollOutput struct {
 	SessionRoll *ronnied.SessionRoll
 }
 
+type UpdateRollInput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type UpdateRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
 type GetSessionRollInput struct {
 	ID string
 }

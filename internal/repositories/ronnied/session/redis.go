@@ -148,11 +148,13 @@ func (r *Redis) JoinSessionRoll(ctx context.Context, input *JoinSessionRollInput
 		return nil, err
 	}
 
-	if roll.HasPlayer(input.PlayerID) {
+	if player := roll.HasPlayer(input.PlayerID); player != nil {
 		return nil, dnderr.NewAlreadyExistsError("player already in roll")
 	}
 
-	roll.Players = append(roll.Players, input.PlayerID)
+	roll.Players = append(roll.Players, &ronnied.Player{
+		ID: input.PlayerID,
+	})
 
 	rollBytes, err := json.Marshal(roll)
 	if err != nil {
@@ -196,11 +198,13 @@ func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
 		return nil, err
 	}
 
-	if session.HasPlayer(input.PlayerID) {
+	if player := session.HasPlayer(input.PlayerID); player != nil {
 		return nil, dnderr.NewAlreadyExistsError("player already in session")
 	}
 
-	session.Players = append(session.Players, input.PlayerID)
+	session.Players = append(session.Players, &ronnied.Player{
+		ID: input.PlayerID,
+	})
 
 	sessionBytes, err := json.Marshal(session)
 	if err != nil {
@@ -263,6 +267,35 @@ func (r *Redis) CreateRoll(ctx context.Context, input *CreateRollInput) (*Create
 	}, nil
 }
 
+func (r *Redis) UpdateRoll(ctx context.Context, input *UpdateRollInput) (*UpdateRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRoll == nil {
+		return nil, dnderr.NewMissingParameterError("input.SessionRoll")
+	}
+
+	if input.SessionRoll.ID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRoll.ID")
+	}
+
+	rollBytes, err := json.Marshal(input.SessionRoll)
+	if err != nil {
+		return nil, err
+	}
+
+	rollKey := getSessionRollKey(input.SessionRoll.ID)
+
+	err = r.client.Set(ctx, rollKey, string(rollBytes), 0).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateRollOutput{
+		SessionRoll: input.SessionRoll,
+	}, nil
+}
 func (r *Redis) GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -318,7 +351,7 @@ func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOu
 		return nil, err
 	}
 
-	if !sessionRoll.HasPlayer(input.PlayerID) {
+	if player := sessionRoll.HasPlayer(input.PlayerID); player == nil {
 		return nil, dnderr.NewNotFoundError("player not in session")
 	}
 

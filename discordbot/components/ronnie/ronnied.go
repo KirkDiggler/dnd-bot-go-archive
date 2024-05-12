@@ -846,6 +846,15 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 				c.SessionRoll(s, i)
 				return
 			}
+
+			if strings.HasPrefix(data.CustomID, "assign_drink:") {
+				c.SessionAssignDrink(s, i)
+				return
+			}
+
+			if strings.HasPrefix(data.CustomID, "new_session:") {
+				c.SessionNew(s, i)
+			}
 		}
 	}
 }

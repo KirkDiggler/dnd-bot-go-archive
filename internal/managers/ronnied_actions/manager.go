@@ -102,8 +102,18 @@ func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	roll := rand.Intn(6) + 1
+	sessionRollResult, err := m.sessionRepo.GetSessionRoll(ctx, &session.GetSessionRollInput{
+		ID: input.SessionRollID,
+	})
+	if err != nil {
+		return nil, err
+	}
 
+	if entry := sessionRollResult.SessionRoll.HasPlayerEntry(input.PlayerID); entry != nil {
+		return nil, dnderr.NewInvalidEntityError("player has already rolled")
+	}
+
+	roll := rand.Intn(6) + 1
 	result, err := m.sessionRepo.AddEntry(ctx, &session.AddEntryInput{
 		SessionRollID: input.SessionRollID,
 		PlayerID:      input.PlayerID,
@@ -210,7 +220,7 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 		return nil, err
 	}
 
-	_, err = m.sessionRepo.JoinSessionRoll(ctx, &session.JoinSessionRollInput{
+	rollResult, err := m.sessionRepo.JoinSessionRoll(ctx, &session.JoinSessionRollInput{
 		SessionRollID: input.SessionRollID,
 		PlayerID:      input.PlayerID,
 	})
@@ -219,7 +229,29 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 	}
 
 	return &JoinSessionOutput{
-		Session: result.Session,
+		Session:     result.Session,
+		SessionRoll: rollResult.SessionRoll,
+	}, nil
+}
+
+func (m *Manager) UpdateSessionRoll(ctx context.Context, input *UpdateSessionRollInput) (*UpdateSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRoll == nil {
+		return nil, dnderr.NewMissingParameterError("input.SessionRoll")
+	}
+
+	_, err := m.sessionRepo.UpdateRoll(ctx, &session.UpdateRollInput{
+		SessionRoll: input.SessionRoll,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateSessionRollOutput{
+		SessionRoll: input.SessionRoll,
 	}, nil
 }
 
@@ -242,6 +274,44 @@ func (m *Manager) GetSession(ctx context.Context, input *GetSessionInput) (*GetS
 	return &GetSessionOutput{
 		Session: result.Session,
 	}, nil
+}
+
+func (m *Manager) AssignDrink(ctx context.Context, input *AssignDrinkInput) (*AssignDrinkOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRollID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRollID")
+	}
+
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+
+	sessionRollResult, err := m.sessionRepo.GetSessionRoll(ctx, &session.GetSessionRollInput{
+		ID: input.SessionRollID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range sessionRollResult.SessionRoll.Entries {
+		if entry.PlayerID == input.PlayerID {
+			entry.AssignedTo = input.AssignedTo
+			break
+		}
+	}
+
+	_, err = m.sessionRepo.UpdateRoll(ctx, &session.UpdateRollInput{
+		SessionRoll: sessionRollResult.SessionRoll,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = m.gameRepo.AddEntry(ctx, &game.AddEntryInput{})
+	return &AssignDrinkOutput{}, nil
 }
 
 func (m *Manager) CreateGame(ctx context.Context, input *CreateGameInput) (*CreateGameOutput, error) {
