@@ -35,6 +35,15 @@ type JoinOutput struct {
 	Session *ronnied.Session
 }
 
+type JoinSessionRollInput struct {
+	SessionRollID string
+	PlayerID      string
+}
+
+type JoinSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
 type CreateRollInput struct {
 	SessionID    string
 	Type         ronnied.RollType
@@ -45,11 +54,19 @@ type CreateRollOutput struct {
 	SessionRoll *ronnied.SessionRoll
 }
 
+type GetSessionRollInput struct {
+	ID string
+}
+
+type GetSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
 type AddEntryInput struct {
-	SessionID  string
-	PlayerID   string
-	Roll       int
-	AssignedTo string
+	SessionRollID string
+	PlayerID      string
+	Roll          int
+	AssignedTo    string
 }
 
 type AddEntryOutput struct {

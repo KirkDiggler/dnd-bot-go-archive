@@ -43,6 +43,83 @@ func NewManager(cfg *ManagerConfig) (*Manager, error) {
 	}, nil
 }
 
+func (m *Manager) UpdateSession(ctx context.Context, input *UpdateSessionInput) (*UpdateSessionOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.Session == nil {
+		return nil, dnderr.NewMissingParameterError("input.Session")
+	}
+
+	if input.Session.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.Session.GameID")
+	}
+
+	_, err := m.sessionRepo.Update(ctx, &session.UpdateInput{
+		Session: input.Session,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateSessionOutput{
+		Session: input.Session,
+	}, nil
+}
+
+func (m *Manager) GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRollID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRollID")
+	}
+
+	result, err := m.sessionRepo.GetSessionRoll(ctx, &session.GetSessionRollInput{
+		ID: input.SessionRollID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetSessionRollOutput{
+		SessionRoll: result.SessionRoll,
+	}, nil
+}
+
+func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput) (*AddSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRollID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRollID")
+	}
+
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+
+	roll := rand.Intn(6) + 1
+
+	result, err := m.sessionRepo.AddEntry(ctx, &session.AddEntryInput{
+		SessionRollID: input.SessionRollID,
+		PlayerID:      input.PlayerID,
+		Roll:          roll,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Info("AddSessionRoll", "result", result)
+
+	return &AddSessionRollOutput{
+		SessionEntry: result.SessionEntry,
+	}, nil
+}
+
 func (m *Manager) CreateSession(ctx context.Context, input *CreateSessionInput) (*CreateSessionOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -84,6 +161,33 @@ func (m *Manager) CreateSession(ctx context.Context, input *CreateSessionInput) 
 	}, nil
 }
 
+func (m *Manager) CreateSessionRoll(ctx context.Context, input *CreateSessionRollInput) (*CreateSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionID")
+	}
+
+	if input.Participants == nil {
+		return nil, dnderr.NewMissingParameterError("input.Players")
+	}
+
+	rollResult, err := m.sessionRepo.CreateRoll(ctx, &session.CreateRollInput{
+		SessionID:    input.SessionID,
+		Type:         input.Type,
+		Participants: input.Participants,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateSessionRollOutput{
+		SessionRoll: rollResult.SessionRoll,
+	}, nil
+}
+
 func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*JoinSessionOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -101,6 +205,14 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 	result, err := m.sessionRepo.Join(ctx, &session.JoinInput{
 		SessionID: input.SessionID,
 		PlayerID:  input.PlayerID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = m.sessionRepo.JoinSessionRoll(ctx, &session.JoinSessionRollInput{
+		SessionRollID: input.SessionRollID,
+		PlayerID:      input.PlayerID,
 	})
 	if err != nil {
 		return nil, err

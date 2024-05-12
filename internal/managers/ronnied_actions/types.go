@@ -83,13 +83,49 @@ type CreateSessionOutput struct {
 	Session *ronnied.Session
 }
 
+type CreateSessionRollInput struct {
+	SessionID    string
+	Type         ronnied.RollType
+	Participants []string
+}
+
+type CreateSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type GetSessionRollInput struct {
+	SessionRollID string
+}
+
+type GetSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type UpdateSessionInput struct {
+	Session *ronnied.Session
+}
+
+type UpdateSessionOutput struct {
+	Session *ronnied.Session
+}
+
 type JoinSessionInput struct {
-	SessionID string
-	PlayerID  string
+	SessionID     string
+	SessionRollID string
+	PlayerID      string
 }
 
 type JoinSessionOutput struct {
 	Session *ronnied.Session
+}
+
+type AddSessionRollInput struct {
+	SessionRollID string
+	PlayerID      string
+}
+
+type AddSessionRollOutput struct {
+	SessionEntry *ronnied.SessionEntry
 }
 
 type GetSessionInput struct {

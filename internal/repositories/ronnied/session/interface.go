@@ -7,6 +7,8 @@ type Interface interface {
 	Update(ctx context.Context, input *UpdateInput) (*UpdateOutput, error)
 	Get(ctx context.Context, input *GetInput) (*GetOutput, error)
 	Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
+	JoinSessionRoll(ctx context.Context, input *JoinSessionRollInput) (*JoinSessionRollOutput, error)
 	CreateRoll(ctx context.Context, input *CreateRollInput) (*CreateRollOutput, error)
+	GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error)
 	AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOutput, error)
 }

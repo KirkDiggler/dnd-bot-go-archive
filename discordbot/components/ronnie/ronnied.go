@@ -837,8 +837,14 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 			c.RonnieActionListTabs(s, i)
 		default:
 			data := i.MessageComponentData()
-			if strings.HasPrefix(data.CustomID, "join_session_") {
+			if strings.HasPrefix(data.CustomID, "join_session:") {
 				c.SessionJoin(s, i)
+				return
+			}
+
+			if strings.HasPrefix(data.CustomID, "rollem:") {
+				c.SessionRoll(s, i)
+				return
 			}
 		}
 	}

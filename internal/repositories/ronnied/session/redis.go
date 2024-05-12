@@ -7,6 +7,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/redis/go-redis/v9"
+	"log"
 	"time"
 )
 
@@ -121,6 +122,53 @@ func (r *Redis) Update(ctx context.Context, input *UpdateInput) (*UpdateOutput, 
 	}, nil
 }
 
+func (r *Redis) JoinSessionRoll(ctx context.Context, input *JoinSessionRollInput) (*JoinSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionRollID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRollID")
+	}
+
+	if input.PlayerID == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerID")
+	}
+
+	rollKey := getSessionRollKey(input.SessionRollID)
+
+	rollJson, err := r.client.Get(ctx, rollKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	roll := &ronnied.SessionRoll{}
+	err = json.Unmarshal([]byte(rollJson), roll)
+	if err != nil {
+		return nil, err
+	}
+
+	if roll.HasPlayer(input.PlayerID) {
+		return nil, dnderr.NewAlreadyExistsError("player already in roll")
+	}
+
+	roll.Players = append(roll.Players, input.PlayerID)
+
+	rollBytes, err := json.Marshal(roll)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.client.Set(ctx, rollKey, string(rollBytes), 0).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return &JoinSessionRollOutput{
+		SessionRoll: roll,
+	}, nil
+}
+
 // Join adds a player to a session by setting them to the roll type start session roll
 func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error) {
 	if input == nil {
@@ -192,10 +240,10 @@ func (r *Redis) CreateRoll(ctx context.Context, input *CreateRollInput) (*Create
 	}
 
 	roll := &ronnied.SessionRoll{
-		ID:           r.uuider.New(),
-		SessionID:    session.ID,
-		Type:         ronnied.RollTypeStart,
-		Participants: input.Participants,
+		ID:        r.uuider.New(),
+		SessionID: session.ID,
+		Type:      ronnied.RollTypeStart,
+		Players:   session.Players,
 	}
 
 	rollBytes, err := json.Marshal(roll)
@@ -215,52 +263,81 @@ func (r *Redis) CreateRoll(ctx context.Context, input *CreateRollInput) (*Create
 	}, nil
 }
 
+func (r *Redis) GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.ID == "" {
+		return nil, dnderr.NewMissingParameterError("input.ID")
+	}
+
+	rollKey := getSessionRollKey(input.ID)
+
+	rollJson, err := r.client.Get(ctx, rollKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	roll := &ronnied.SessionRoll{}
+	err = json.Unmarshal([]byte(rollJson), roll)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetSessionRollOutput{
+		SessionRoll: roll,
+	}, nil
+}
+
 func (r *Redis) AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	if input.SessionID == "" {
-		return nil, dnderr.NewMissingParameterError("input.SessionID")
+	if input.SessionRollID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionRollID")
 	}
 
 	if input.PlayerID == "" {
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
-	sessionKey := getSessionKey(input.SessionID)
+	sessionRollKey := getSessionRollKey(input.SessionRollID)
 
-	sessionJson, err := r.client.Get(ctx, sessionKey).Result()
+	sessionJson, err := r.client.Get(ctx, sessionRollKey).Result()
+	if err != nil {
+		log.Println("Failed to get session roll:", sessionRollKey, err)
+
+		return nil, err
+	}
+
+	sessionRoll := &ronnied.SessionRoll{}
+	err = json.Unmarshal([]byte(sessionJson), sessionRoll)
 	if err != nil {
 		return nil, err
 	}
 
-	session := &ronnied.Session{}
-	err = json.Unmarshal([]byte(sessionJson), session)
-	if err != nil {
-		return nil, err
-	}
-
-	if !session.HasPlayer(input.PlayerID) {
+	if !sessionRoll.HasPlayer(input.PlayerID) {
 		return nil, dnderr.NewNotFoundError("player not in session")
 	}
 
 	entry := &ronnied.SessionEntry{
-		ID:         r.uuider.New(),
-		SessionID:  session.ID,
-		PlayerID:   input.PlayerID,
-		Roll:       input.Roll,
-		AssignedTo: input.AssignedTo,
+		ID:            r.uuider.New(),
+		SessionRollID: sessionRoll.ID,
+		PlayerID:      input.PlayerID,
+		Roll:          input.Roll,
+		AssignedTo:    input.AssignedTo,
 	}
 
-	entryBytes, err := json.Marshal(entry)
+	sessionRoll.Entries = append(sessionRoll.Entries, entry)
+
+	entryBytes, err := json.Marshal(sessionRoll)
 	if err != nil {
 		return nil, err
 	}
 
-	entryKey := getSessionEntryKey(entry.ID)
-
-	err = r.client.Set(ctx, entryKey, string(entryBytes), 0).Err()
+	err = r.client.Set(ctx, sessionRollKey, string(entryBytes), 0).Err()
 	if err != nil {
 		return nil, err
 	}
