@@ -447,6 +447,12 @@ func (c *RonnieD) SessionAssignDrink(s *discordgo.Session, i *discordgo.Interact
 
 	c.updateGameMessage(s, i, sessionRollID)
 }
+
+type results struct {
+	player string
+	drinks int
+}
+
 func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.InteractionCreate, sessionRollID string) {
 	sessionRollResult, err := c.manager.GetSessionRoll(context.Background(), &ronnied_actions.GetSessionRollInput{
 		SessionRollID: sessionRollID,
@@ -465,13 +471,14 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 		return
 	}
 
-	title := "Players Joining"
+	title := "Rollem Game Accepting Players"
 
 	embed := &discordgo.MessageEmbed{
-		Title:       "Rollem Game",
-		Description: title,
-		Color:       0x00ff00, // Green color
+		Title: title,
+		Color: 0x00ff00, // Green color
 	}
+
+	playerResults := make(map[string]*results)
 
 	for _, participant := range sessionRollResult.SessionRoll.Players {
 		user, userErr := s.User(participant.ID)
@@ -480,12 +487,16 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 			break
 		}
 
+		playerResults[participant.ID] = &results{
+			player: user.Username,
+			drinks: 0,
+		}
 		// add green checkmark icon if the entry is completed
 		var content string
 
 		addDefault := true
 		if entry := sessionRollResult.SessionRoll.HasPlayerEntry(participant.ID); entry != nil {
-			title = "Rolling in progress"
+			title = "Rolling"
 			//default to a timeer icon
 			content = "⏳ "
 			addDefault = false
@@ -495,6 +506,7 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 			if sessionRollResult.SessionRoll.IsComplete() {
 				if sessionRollResult.SessionRoll.IsLoser(entry) {
 					content = "🍻 "
+					playerResults[participant.ID].drinks += 1
 				} else {
 					content = "🎉 "
 				}
@@ -507,6 +519,7 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 			}
 
 			if entry.AssignedTo != "" {
+				playerResults[entry.AssignedTo].drinks += 1
 				assignedUser, userErr := s.User(entry.AssignedTo)
 				if userErr != nil {
 					log.Println("Failed to get user:", userErr)
@@ -546,7 +559,7 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 	}
 
 	if sessionRollResult.SessionRoll.IsComplete() {
-		title = "Game Over"
+		title = "Rolled"
 	} else {
 		buttons = append(buttons,
 			discordgo.Button{
@@ -561,12 +574,32 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 		&discordgo.ActionsRow{Components: buttons},
 	}
 
-	embed.Description = title
+	embed.Title = title
+	embeds := []*discordgo.MessageEmbed{embed}
+	if sessionRollResult.SessionRoll.IsComplete() {
+		embed.Color = 0xff0000 // Red color
+		//add results with yellow beer color
+		resultEmbed := &discordgo.MessageEmbed{
+			Title: "Dranks! 🍻",
+			Color: 0x00ff00, // Green color
+		}
+
+		for _, playerResult := range playerResults {
+			resultEmbed.Fields = append(resultEmbed.Fields, &discordgo.MessageEmbedField{
+				Name:   playerResult.player,
+				Value:  fmt.Sprintf("🍻 %d", playerResult.drinks),
+				Inline: true,
+			})
+		}
+
+		embeds = append(embeds, resultEmbed)
+	}
+
 	edit := &discordgo.MessageEdit{
 		ID:         result.Session.MessageID,
 		Content:    &title,
 		Channel:    i.ChannelID,
-		Embed:      embed,
+		Embeds:     &embeds,
 		Components: &buttonRow,
 	}
 

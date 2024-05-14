@@ -90,7 +90,7 @@ func (sr *SessionRoll) IsLoser(input *SessionEntry) bool {
 }
 
 func (sr *SessionRoll) IsComplete() bool {
-	if len(sr.Entries) == 0 {
+	if len(sr.Entries) != len(sr.Players) {
 		return false
 	}
 
