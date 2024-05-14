@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
@@ -309,13 +310,13 @@ func (r *Redis) GetSessionRoll(ctx context.Context, input *GetSessionRollInput) 
 
 	rollJson, err := r.client.Get(ctx, rollKey).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("session.Redis.GetSessionRoll with key: %s, err: %w", rollKey, err)
 	}
 
 	roll := &ronnied.SessionRoll{}
 	err = json.Unmarshal([]byte(rollJson), roll)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("session.Redis.GetSessionRoll MarshalError: %w", err)
 	}
 
 	return &GetSessionRollOutput{

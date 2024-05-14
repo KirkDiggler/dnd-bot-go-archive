@@ -106,7 +106,7 @@ func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput
 		ID: input.SessionRollID,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ronnied_actions.Manager.AddSessionRoll failed to get session roll: %w", err)
 	}
 
 	if entry := sessionRollResult.SessionRoll.HasPlayerEntry(input.PlayerID); entry != nil {

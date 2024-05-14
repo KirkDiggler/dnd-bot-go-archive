@@ -1,6 +1,9 @@
 package ronnied
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type RollType string
 
@@ -68,10 +71,51 @@ func (sr *SessionRoll) UpdatePlayerMsgID(playerID, msgID string) {
 	}
 }
 
+// LoserEntires the entries that have the lowest score
+func (sr *SessionRoll) IsLoser(input *SessionEntry) bool {
+	lowestRoll := 6
+	for _, entry := range sr.Entries {
+		if entry.Roll < lowestRoll {
+			lowestRoll = entry.Roll
+		}
+	}
+
+	for _, entry := range sr.Entries {
+		if input.PlayerID == entry.PlayerID && entry.Roll == lowestRoll {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (sr *SessionRoll) IsComplete() bool {
+	if len(sr.Entries) == 0 {
+		return false
+	}
+
+	for _, entry := range sr.Entries {
+		if !entry.Completed {
+			return false
+		}
+	}
+
+	return true
+}
+
 type SessionEntry struct {
 	ID            string
 	SessionRollID string
 	PlayerID      string
 	Roll          int
 	AssignedTo    string
+	Completed     bool
+}
+
+func (se *SessionEntry) Complete() {
+	se.Completed = true
+}
+
+func (se *SessionEntry) String() string {
+	return fmt.Sprintf("Roll: %d", se.Roll)
 }
