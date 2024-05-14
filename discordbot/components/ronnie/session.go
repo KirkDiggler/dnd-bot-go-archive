@@ -519,6 +519,15 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 			}
 
 			if entry.AssignedTo != "" {
+				if _, ok := playerResults[entry.AssignedTo]; !ok {
+					log.Println("Assigned user not found:", entry.AssignedTo, " adding to results")
+				}
+
+				playerResults[entry.AssignedTo] = &results{
+					player: entry.AssignedTo,
+					drinks: 0,
+				}
+
 				playerResults[entry.AssignedTo].drinks += 1
 				assignedUser, userErr := s.User(entry.AssignedTo)
 				if userErr != nil {
