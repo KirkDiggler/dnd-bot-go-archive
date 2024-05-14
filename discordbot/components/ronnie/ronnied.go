@@ -1,4 +1,4 @@
-package components
+package ronnie
 
 import (
 	"context"
@@ -600,62 +600,6 @@ func (c *RonnieD) RonnieActionListTabs(s *discordgo.Session, i *discordgo.Intera
 	}
 }
 
-func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	switch i.Type {
-	case discordgo.InteractionApplicationCommand:
-		switch i.ApplicationCommandData().Name {
-		case "ronnied":
-			switch i.ApplicationCommandData().Options[0].Name {
-			case "action":
-				c.Action(s, i)
-			case "gamejoin":
-				c.JoinGame(s, i)
-			case "gettab":
-				c.GetTab(s, i)
-			case "tabs":
-				c.ListTabs(s, i)
-			case "rollem":
-				c.RonnieRoll(s, i)
-			case "rolls":
-				c.RonnieRolls(s, i)
-			case "drink":
-				c.PayDrink(s, i)
-			case "advise":
-				grabBag := []string{
-					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: that's a drink", i.Member.User.Username),
-					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: pass a drink", i.Member.User.Username),
-					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: social!", i.Member.User.Username),
-				}
-
-				result := grabBag[rand.Intn(len(grabBag))]
-
-				log.Println(result)
-
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: result,
-					},
-				})
-				if err != nil {
-					log.Print(err)
-				}
-			}
-		}
-	case discordgo.InteractionMessageComponent:
-		switch i.MessageComponentData().CustomID {
-		case ronnieRollBack:
-			c.RollBack(s, i)
-		case ronnieActionRoll:
-			c.RonnieActionRoll(s, i)
-		case ronniActionPayTab:
-			c.RonnieActionPayTab(s, i)
-		case ronnieActionListTabs:
-			c.RonnieActionListTabs(s, i)
-		}
-	}
-}
-
 func (c *RonnieD) GetTab(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	if data.Options[0].Name == "gettab" {
@@ -839,6 +783,84 @@ func (c *RonnieD) CreateGame(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 }
 
+func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		switch i.ApplicationCommandData().Name {
+		case "ronnied":
+			switch i.ApplicationCommandData().Options[0].Name {
+			case "action":
+				c.Action(s, i)
+			case "gettab":
+				c.GetTab(s, i)
+			case "tabs":
+				c.ListTabs(s, i)
+			case "rollem":
+				c.RonnieRoll(s, i)
+			case "game":
+				c.SessionCreate(s, i)
+			case "rolls":
+				c.RonnieRolls(s, i)
+			case "drink":
+				c.PayDrink(s, i)
+			case "advise":
+				grabBag := []string{
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: that's a drink", i.Member.User.Username),
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: pass a drink", i.Member.User.Username),
+					fmt.Sprintf("%s asked Ronnie D for advice, Ronnie D says: social!", i.Member.User.Username),
+				}
+
+				result := grabBag[rand.Intn(len(grabBag))]
+
+				log.Println(result)
+
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: result,
+					},
+				})
+				if err != nil {
+					log.Print(err)
+				}
+			}
+		}
+	case discordgo.InteractionMessageComponent:
+		switch i.MessageComponentData().CustomID {
+		case ronnieRollBack:
+			c.RollBack(s, i)
+		case ronnieActionRoll:
+			c.RonnieActionRoll(s, i)
+		case ronniActionPayTab:
+			c.RonnieActionPayTab(s, i)
+		case ronnieActionListTabs:
+			c.RonnieActionListTabs(s, i)
+		default:
+			data := i.MessageComponentData()
+			if strings.HasPrefix(data.CustomID, "join_session:") {
+				c.SessionJoin(s, i)
+				return
+			}
+
+			if strings.HasPrefix(data.CustomID, "rollem:") {
+				c.SessionRoll(s, i)
+				return
+			}
+
+			if strings.HasPrefix(data.CustomID, "assign_drink:") {
+				c.SessionAssignDrink(s, i)
+				return
+			}
+			if strings.HasPrefix(data.CustomID, "new_session:") {
+				c.SessionNew(s, i)
+			}
+			if strings.HasPrefix(data.CustomID, "session_continue:") {
+				c.SessionContinue(s, i)
+			}
+		}
+	}
+}
+
 func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 	return &discordgo.ApplicationCommand{
 		Name:        "ronnied",
@@ -853,8 +875,8 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Description: "what should I do RonnieD?",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
-				Name:        "gamejoin",
-				Description: "Join a game",
+				Name:        "join",
+				Description: "Join a Session",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
 				Name:        "gettab",
@@ -863,6 +885,10 @@ func (c *RonnieD) GetApplicationCommand() *discordgo.ApplicationCommand {
 			}, {
 				Name:        "action",
 				Description: "take action",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "game",
+				Description: "Create a new game",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},

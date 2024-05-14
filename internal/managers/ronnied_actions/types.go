@@ -44,6 +44,15 @@ type AddRollInput struct {
 	Roll     int
 }
 
+type AssignDrinkInput struct {
+	GameID        string
+	PlayerID      string
+	SessionRollID string
+	AssignedTo    string
+}
+
+type AssignDrinkOutput struct{}
+
 type AddRollOutput struct {
 	AssignedTo string
 	Success    bool
@@ -73,4 +82,74 @@ type ListTabsInput struct {
 
 type ListTabsOutput struct {
 	Tabs []*ronnied.Tab
+}
+
+type CreateSessionInput struct {
+	GameID string
+}
+
+type CreateSessionOutput struct {
+	Session *ronnied.Session
+}
+
+type CreateSessionRollInput struct {
+	SessionID    string
+	Type         ronnied.RollType
+	Participants []string
+}
+
+type CreateSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type GetSessionRollInput struct {
+	SessionRollID string
+}
+
+type GetSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type UpdateSessionInput struct {
+	Session *ronnied.Session
+}
+
+type UpdateSessionOutput struct {
+	Session *ronnied.Session
+}
+
+type JoinSessionInput struct {
+	SessionID     string
+	SessionRollID string
+	PlayerID      string
+}
+
+type JoinSessionOutput struct {
+	Session     *ronnied.Session
+	SessionRoll *ronnied.SessionRoll
+}
+
+type AddSessionRollInput struct {
+	SessionRollID string
+	PlayerID      string
+}
+
+type AddSessionRollOutput struct {
+	SessionEntry *ronnied.SessionEntry
+}
+
+type UpdateSessionRollInput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type UpdateSessionRollOutput struct {
+	SessionRoll *ronnied.SessionRoll
+}
+
+type GetSessionInput struct {
+	SessionID string
+}
+
+type GetSessionOutput struct {
+	Session *ronnied.Session
 }

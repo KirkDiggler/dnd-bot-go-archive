@@ -1,6 +1,7 @@
 package discordbot
 
 import (
+	"github.com/KirkDiggler/dnd-bot-go/discordbot/components/ronnie"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
 	"log"
 
@@ -25,7 +26,7 @@ type bot struct {
 	partyRepo          party.Interface
 	partyComponent     *components.Party
 	characterComponent *character.Character
-	ronnieDComponent   *components.RonnieD
+	ronnieDComponent   *ronnie.RonnieD
 	ronnieDAtcions     ronnied_actions.Interface
 }
 
@@ -89,7 +90,7 @@ func New(cfg *Config) (*bot, error) {
 		return nil, err
 	}
 
-	ronniedComponent, err := components.NewRonnieD(&components.RonnieDConfig{
+	ronniedComponent, err := ronnie.NewRonnieD(&ronnie.RonnieDConfig{
 		Manager: cfg.RonnieDActions,
 	})
 	if err != nil {

@@ -2,6 +2,20 @@ package dnderr
 
 import "fmt"
 
+type AlreadyExistsError struct {
+	Msg string
+}
+
+func (e *AlreadyExistsError) Error() string {
+	return e.Msg
+}
+
+func NewAlreadyExistsError(msg string) error {
+	return &AlreadyExistsError{
+		Msg: msg,
+	}
+}
+
 type MissingParameterError struct {
 	Param string
 }

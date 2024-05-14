@@ -51,6 +51,10 @@ func (r *Redis) Get(ctx context.Context, input *GetInput) (*GetOutput, error) {
 
 	gameJson, err := r.client.Get(ctx, gameKey).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, internal.ErrRecordNotFound
+		}
+
 		return nil, err
 	}
 
@@ -91,6 +95,7 @@ func (r *Redis) Create(ctx context.Context, input *CreateInput) (*CreateOutput, 
 		Game: input.Game,
 	}, nil
 }
+
 func (r *Redis) Leave(ctx context.Context, input *LeaveInput) (*LeaveOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
