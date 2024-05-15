@@ -164,6 +164,14 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				if strings.HasSuffix(data.CustomID, ":attributes") {
 					c.handleShowAttributes(s, i)
 				}
+
+				if strings.HasSuffix(data.CustomID, ":equipment") {
+					c.handleShowEquipment(s, i)
+				}
+
+				if strings.HasSuffix(data.CustomID, ":proficiencies") {
+					c.handleShowProficiencies(s, i)
+				}
 			}
 		}
 	}

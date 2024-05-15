@@ -19,6 +19,7 @@ func (c *Character) renderPlayerCard(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	char := input.char
+	embeds := []*discordgo.MessageEmbed{charEmbed}
 
 	embed := &discordgo.MessageEmbed{}
 	switch input.section {
@@ -67,12 +68,7 @@ func (c *Character) renderPlayerCard(s *discordgo.Session, i *discordgo.Interact
 			Inline: true,
 		})
 
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "Rolls",
-			Value:  fmt.Sprintf("%v", char.Rolls),
-			Inline: true,
-		})
-
+		embeds = append(embeds, embed)
 	case "attributes":
 		embed.Title = "Attributes"
 		for attr, score := range char.Attribues {
@@ -82,9 +78,69 @@ func (c *Character) renderPlayerCard(s *discordgo.Session, i *discordgo.Interact
 				Inline: true,
 			})
 		}
+
+		embeds = append(embeds, embed)
+	case "equipment":
+		equippedEmbed := &discordgo.MessageEmbed{
+			Title: "Equipped",
+		}
+
+		for slot, item := range char.EquippedSlots {
+			if item == nil {
+				log.Println("item is nil in slot", slot)
+				continue
+			}
+
+			equippedEmbed.Fields = append(equippedEmbed.Fields, &discordgo.MessageEmbedField{
+				Name:   string(slot),
+				Value:  item.GetName(),
+				Inline: true,
+			})
+		}
+
+		embed.Title = "Backpack"
+		for key := range char.Inventory {
+			for _, item := range char.Inventory[key] {
+
+				if !char.IsEquipped(item) {
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   string(item.GetSlot()),
+						Value:  item.GetName(),
+						Inline: true,
+					})
+				}
+
+			}
+
+		}
+
+		embeds = append(embeds, equippedEmbed)
+		embeds = append(embeds, embed)
+
+	case "proficiencies":
+
+		embed.Title = "Proficiencies"
+		embeds = append(embeds, embed)
+
+		for _, key := range entities.ProficiencyTypes {
+			if char.Proficiencies[key] == nil {
+				continue
+			}
+
+			profEmbed := &discordgo.MessageEmbed{
+				Title: string(key),
+			}
+
+			for _, prof := range char.Proficiencies[key] {
+				profEmbed.Fields = append(profEmbed.Fields, &discordgo.MessageEmbedField{
+					Value: prof.Name,
+				})
+			}
+
+			embeds = append(embeds, profEmbed)
+		}
 	}
 
-	embeds := []*discordgo.MessageEmbed{charEmbed, embed}
 	buttonRow := []discordgo.MessageComponent{
 		&discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
@@ -101,6 +157,11 @@ func (c *Character) renderPlayerCard(s *discordgo.Session, i *discordgo.Interact
 				discordgo.Button{
 					Label:    "Equipment",
 					CustomID: "char:" + char.ID + ":equipment",
+					Style:    discordgo.PrimaryButton,
+				},
+				discordgo.Button{
+					Label:    "Proficiencies",
+					CustomID: "char:" + char.ID + ":proficiencies",
 					Style:    discordgo.PrimaryButton,
 				},
 			}},
@@ -160,6 +221,32 @@ func (c *Character) handleShowStats(s *discordgo.Session, i *discordgo.Interacti
 
 	c.renderPlayerCard(s, i, &rederPlayerCardInput{
 		section: "stats",
+		char:    char,
+	})
+}
+
+func (c *Character) handleShowProficiencies(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	c.renderPlayerCard(s, i, &rederPlayerCardInput{
+		section: "proficiencies",
+		char:    char,
+	})
+}
+
+func (c *Character) handleShowEquipment(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
+
+	c.renderPlayerCard(s, i, &rederPlayerCardInput{
+		section: "equipment",
 		char:    char,
 	})
 }

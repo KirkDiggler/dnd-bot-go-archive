@@ -374,7 +374,7 @@ func (c *Character) String() string {
 
 		msg.WriteString(fmt.Sprintf("  -  **%s**:\n", key))
 		for _, item := range c.Inventory[key] {
-			if c.isEquipped(item) {
+			if c.IsEquipped(item) {
 				msg.WriteString(fmt.Sprintf("    -  %s (Equipped)\n", item.GetName()))
 				continue
 			}
@@ -386,7 +386,7 @@ func (c *Character) String() string {
 	return msg.String()
 }
 
-func (c *Character) isEquipped(e Equipment) bool {
+func (c *Character) IsEquipped(e Equipment) bool {
 	for _, item := range c.EquippedSlots {
 		if item == nil {
 			continue
