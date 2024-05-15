@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
+	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-go/internal/types"
 	"github.com/redis/go-redis/v9"
 )
@@ -34,33 +35,16 @@ func NewRedis(cfg *RedisConfig) (*Redis, error) {
 	}, nil
 }
 
-func characterEncounterKey(characterID string) string {
-	return "characterEncounter:" + characterID
-}
-
 func getEncounterKey(id string) string {
 	return "encounter:" + id
 }
 
-func encounterToJson(encounter *Data) (string, error) {
-	if encounter == nil {
-		return "", dnderr.NewMissingParameterError("encounter")
-	}
-
-	buf, err := json.Marshal(encounter)
-	if err != nil {
-		return "", err
-	}
-
-	return string(buf), nil
-}
-
-func jsonToEncounter(jsonStr string) (*Data, error) {
+func jsonToEncounter(jsonStr string) (*entities.Encounter, error) {
 	if jsonStr == "" {
 		return nil, dnderr.NewMissingParameterError("jsonStr")
 	}
 
-	var encounter Data
+	var encounter entities.Encounter
 	err := json.Unmarshal([]byte(jsonStr), &encounter)
 	if err != nil {
 		return nil, err
@@ -69,7 +53,7 @@ func jsonToEncounter(jsonStr string) (*Data, error) {
 	return &encounter, nil
 }
 
-func (r *Redis) Create(ctx context.Context, encounter *Data) (*Data, error) {
+func (r *Redis) Create(ctx context.Context, encounter *entities.Encounter) (*entities.Encounter, error) {
 	if encounter == nil {
 		return nil, dnderr.NewMissingParameterError("encounter")
 	}
@@ -78,36 +62,15 @@ func (r *Redis) Create(ctx context.Context, encounter *Data) (*Data, error) {
 		return nil, dnderr.NewInvalidEntityError("encounter.ID")
 	}
 
-	if encounter.PlayerID == "" {
-		return nil, dnderr.NewMissingParameterError("encounter.PlayerID")
-	}
-
 	encounter.ID = r.uuider.New()
 
-	now := r.timeClock.Now()
-
-	encounter.CreatedAt = now
-	encounter.UpdatedAt = now
-
-	jsonStr, err := encounterToJson(encounter)
+	jsonStr, err := encounter.MarshallJSON()
 	if err != nil {
 		return nil, err
 	}
 
-	encounterCount, err := r.client.ZCard(ctx, characterEncounterKey(encounter.PlayerID)).Result()
-	if err != nil {
-		return nil, err
-	}
+	err = r.client.Set(ctx, getEncounterKey(encounter.ID), jsonStr, 0).Err()
 
-	// Add encounter and by-character index with transaction
-	pipe := r.client.TxPipeline()
-	pipe.Set(ctx, getEncounterKey(encounter.ID), jsonStr, 0)
-	pipe.ZAdd(ctx, characterEncounterKey(encounter.PlayerID), redis.Z{
-		Score:  float64(encounterCount + 1),
-		Member: getEncounterKey(encounter.ID),
-	})
-
-	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -115,37 +78,29 @@ func (r *Redis) Create(ctx context.Context, encounter *Data) (*Data, error) {
 	return encounter, nil
 }
 
-func (r *Redis) Update(ctx context.Context, encounter *Data) error {
+func (r *Redis) Update(ctx context.Context, encounter *entities.Encounter) (*entities.Encounter, error) {
 	if encounter == nil {
-		return dnderr.NewMissingParameterError("encounter")
+		return nil, dnderr.NewMissingParameterError("encounter")
 	}
 
 	if encounter.ID == "" {
-		return dnderr.NewInvalidEntityError("encounter.ID cannot be null")
+		return nil, dnderr.NewInvalidEntityError("encounter.ID cannot be null")
 	}
 
-	existing, err := r.Get(ctx, encounter.ID)
+	jsonStr, err := encounter.MarshallJSON()
 	if err != nil {
-		return err
-	}
-
-	encounter.CreatedAt = existing.CreatedAt
-	encounter.UpdatedAt = r.timeClock.Now()
-
-	jsonStr, err := encounterToJson(encounter)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = r.client.Set(ctx, getEncounterKey(encounter.ID), jsonStr, 0).Err()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return encounter, nil
 }
 
-func (r *Redis) Get(ctx context.Context, id string) (*Data, error) {
+func (r *Redis) Get(ctx context.Context, id string) (*entities.Encounter, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
 	}
@@ -161,32 +116,4 @@ func (r *Redis) Get(ctx context.Context, id string) (*Data, error) {
 	}
 
 	return encounter, nil
-}
-
-func (r *Redis) ListByPlayer(ctx context.Context, playerID string) ([]*Data, error) {
-	if playerID == "" {
-		return nil, dnderr.NewMissingParameterError("playerID")
-	}
-
-	encounterKeys, err := r.client.ZRevRange(ctx, characterEncounterKey(playerID), 0, 10).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	var encounters []*Data
-	for _, encounterKey := range encounterKeys {
-		jsonStr, err := r.client.Get(ctx, encounterKey).Result()
-		if err != nil {
-			return nil, err
-		}
-
-		encounter, err := jsonToEncounter(jsonStr)
-		if err != nil {
-			return nil, err
-		}
-
-		encounters = append(encounters, encounter)
-	}
-
-	return encounters, nil
 }

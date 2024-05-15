@@ -303,6 +303,27 @@ func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
 	c.Attribues[attr] = c.Attribues[attr].AddBonus(bonus)
 }
 
+func (c *Character) NameString() string {
+	if c.Race == nil || c.Class == nil {
+		return "Character not fully created"
+	}
+
+	return fmt.Sprintf("%s the %s %s", c.Name, c.Race.Name, c.Class.Name)
+}
+
+func (c *Character) StatsString() string {
+	msg := strings.Builder{}
+	msg.WriteString(fmt.Sprintf("  -  Speed: %d\n", c.Speed))
+	msg.WriteString(fmt.Sprintf("  -  Hit Die: %d\n", c.HitDie))
+	msg.WriteString(fmt.Sprintf("  -  AC: %d\n", c.AC))
+	msg.WriteString(fmt.Sprintf("  -  Max Hit Points: %d\n", c.MaxHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Current Hit Points: %d\n", c.CurrentHitPoints))
+	msg.WriteString(fmt.Sprintf("  -  Level: %d\n", c.Level))
+	msg.WriteString(fmt.Sprintf("  -  Experience: %d\n", c.Experience))
+
+	return msg.String()
+}
+
 func (c *Character) String() string {
 	msg := strings.Builder{}
 	if c.Race == nil || c.Class == nil {

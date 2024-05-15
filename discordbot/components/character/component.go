@@ -84,6 +84,10 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 				Name:        "attack",
 				Description: "Attack a target using your equipped weapon",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			}, {
+				Name:        "encounter",
+				Description: "Start an encounter to join with other players",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
 	}
@@ -105,6 +109,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleEquipInventory(s, i)
 			case "attack":
 				c.handleAttack(s, i)
+			case "encounter":
+				c.handleEncounterCreate(s, i)
 			}
 		}
 	case discordgo.InteractionMessageComponent:
@@ -144,6 +150,21 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			c.handleEquipmentSelect(s, i)
 		case equipInventoryAction:
 			c.handleEquipInventorySelect(s, i)
+		default:
+			data := i.MessageComponentData()
+			if strings.HasPrefix(data.CustomID, "encounter:join:") {
+				c.handleEncounterJoin(s, i)
+			}
+
+			if strings.HasPrefix(data.CustomID, "char:") {
+				if strings.HasSuffix(data.CustomID, ":stats") {
+					c.handleShowStats(s, i)
+				}
+
+				if strings.HasSuffix(data.CustomID, ":attributes") {
+					c.handleShowAttributes(s, i)
+				}
+			}
 		}
 	}
 }

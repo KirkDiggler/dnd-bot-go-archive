@@ -13,8 +13,8 @@ const (
 )
 
 type Player struct {
-	ID    string
-	MsgID string
+	ID   string
+	Name string
 }
 type Session struct {
 	ID          string
@@ -61,14 +61,6 @@ func (sr *SessionRoll) HasPlayerEntry(playerID string) *SessionEntry {
 	}
 
 	return nil
-}
-
-func (sr *SessionRoll) UpdatePlayerMsgID(playerID, msgID string) {
-	for _, player := range sr.Players {
-		if player.ID == playerID {
-			player.MsgID = msgID
-		}
-	}
 }
 
 // LoserEntires the entries that have the lowest score

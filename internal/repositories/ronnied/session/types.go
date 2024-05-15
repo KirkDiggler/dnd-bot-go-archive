@@ -27,8 +27,9 @@ type GetOutput struct {
 }
 
 type JoinInput struct {
-	SessionID string
-	PlayerID  string
+	SessionID  string
+	PlayerID   string
+	PlayerName string
 }
 
 type JoinOutput struct {
@@ -38,6 +39,7 @@ type JoinOutput struct {
 type JoinSessionRollInput struct {
 	SessionRollID string
 	PlayerID      string
+	PlayerName    string
 }
 
 type JoinSessionRollOutput struct {
