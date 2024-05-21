@@ -87,7 +87,7 @@ func (sr *SessionRoll) IsComplete() bool {
 	}
 
 	for _, entry := range sr.Entries {
-		if !entry.Completed {
+		if !entry.IsComplete() {
 			return false
 		}
 	}
@@ -108,6 +108,17 @@ func (se *SessionEntry) Complete() {
 	se.Completed = true
 }
 
+func (se *SessionEntry) IsComplete() bool {
+	if se.Roll == 0 {
+		return false
+	}
+
+	if se.Roll == 6 && se.AssignedTo == "" {
+		return false
+	}
+
+	return true
+}
 func (se *SessionEntry) String() string {
 	return fmt.Sprintf("Roll: %d", se.Roll)
 }

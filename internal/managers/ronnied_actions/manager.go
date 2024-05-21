@@ -216,12 +216,13 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 	}
 
 	// join the session
-	result, err := m.sessionRepo.Join(ctx, &session.JoinInput{
+	// TODO: revist if we move to using entries to track players and not the slice of strings
+	_, err := m.sessionRepo.Join(ctx, &session.JoinInput{
 		SessionID:  input.SessionID,
 		PlayerID:   input.PlayerID,
 		PlayerName: input.PlayerName,
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, dnderr.ErrAlreadyExists) {
 		return nil, err
 	}
 
@@ -231,11 +232,23 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 		PlayerName:    input.PlayerName,
 	})
 	if err != nil {
+		if errors.Is(err, dnderr.ErrAlreadyExists) {
+			existingRoll, existingErr := m.sessionRepo.GetSessionRoll(ctx, &session.GetSessionRollInput{
+				ID: input.SessionRollID,
+			})
+			if existingErr != nil {
+				return nil, existingErr
+			}
+
+			return &JoinSessionOutput{
+				SessionRoll: existingRoll.SessionRoll,
+			}, nil
+		}
+
 		return nil, err
 	}
 
 	return &JoinSessionOutput{
-		Session:     result.Session,
 		SessionRoll: rollResult.SessionRoll,
 	}, nil
 }
