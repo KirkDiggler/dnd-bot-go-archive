@@ -88,6 +88,27 @@ func (c *RonnieD) SessionJoin(s *discordgo.Session, i *discordgo.InteractionCrea
 		return
 	}
 
+	// Respond with a message
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: fmt.Sprintf("Joined game with ID %s.", sessionRollID),
+			Components: []discordgo.MessageComponent{
+				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{
+					&discordgo.Button{
+						Label:    "Rollem",
+						CustomID: "rollem:" + sessionRollID,
+						Style:    discordgo.PrimaryButton,
+					},
+				}},
+			},
+		},
+	})
+	if err != nil {
+		log.Println("Failed to respond to interaction:", err)
+	}
+
 	// Update the Player with the message id
 	_, err = c.manager.UpdateSessionRoll(context.Background(), &ronnied_actions.UpdateSessionRollInput{
 		SessionRoll: joinResult.SessionRoll,
@@ -539,13 +560,6 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 				Style:    discordgo.SuccessButton,
 			},
 		)
-
-		buttons = append(buttons,
-			discordgo.Button{
-				Label:    "Roll",
-				CustomID: "rollem:" + sessionRollResult.SessionRoll.ID, // Include session ID in CustomID
-				Style:    discordgo.DangerButton,
-			})
 	}
 
 	buttonRow := []discordgo.MessageComponent{
@@ -648,7 +662,7 @@ func (c *RonnieD) sendGameStartMessage(s *discordgo.Session, i *discordgo.Intera
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{newButton, joinButton}},
+				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{joinButton, newButton}},
 			},
 		},
 	})

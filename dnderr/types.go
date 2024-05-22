@@ -1,18 +1,9 @@
 package dnderr
 
-import (
-	"errors"
-	"fmt"
-)
-
-var ErrAlreadyExists = errors.New("already exists")
+import "fmt"
 
 type AlreadyExistsError struct {
 	Msg string
-}
-
-func (e *AlreadyExistsError) Unwrap() error {
-	return ErrAlreadyExists
 }
 
 func (e *AlreadyExistsError) Error() string {
