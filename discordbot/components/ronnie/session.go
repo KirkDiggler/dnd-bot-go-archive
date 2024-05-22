@@ -290,15 +290,6 @@ func (c *RonnieD) SessionRoll(s *discordgo.Session, i *discordgo.InteractionCrea
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: content,
-			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					&discordgo.Button{
-						Label:    "Continue",
-						CustomID: "session_continue:" + sessionRollID,
-						Style:    discordgo.PrimaryButton,
-					},
-				}},
-			},
 		},
 	})
 	if err != nil {
@@ -423,15 +414,6 @@ func (c *RonnieD) SessionAssignDrink(s *discordgo.Session, i *discordgo.Interact
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: fmt.Sprintf("You assigned the drink to <@%s>.", assignedPlayerID),
-			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					&discordgo.Button{
-						Label:    "Continue",
-						CustomID: "session_continue:" + sessionRollID,
-						Style:    discordgo.PrimaryButton,
-					},
-				}},
-			},
 		},
 	})
 	if err != nil {
@@ -662,7 +644,7 @@ func (c *RonnieD) sendGameStartMessage(s *discordgo.Session, i *discordgo.Intera
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{joinButton, newButton}},
+				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{newButton, joinButton}},
 			},
 		},
 	})
