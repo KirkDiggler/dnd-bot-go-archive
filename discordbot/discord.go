@@ -146,6 +146,13 @@ func (b *bot) Start() error {
 		return err
 	}
 
+	// DnD commands
+	dndCmd := b.characterComponent.GetDNDApplicationCommand()
+	_, err = b.session.ApplicationCommandCreate(b.appID, b.guildID, dndCmd)
+	if err != nil {
+		return err
+	}
+
 	b.registeredCommands = append(b.registeredCommands, charCmd)
 	err = b.session.Open()
 	if err != nil {

@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	selectRaceAction        = "select-race"
+	selectClassAction       = "select-class"
+	setNameAction           = "set-name"
 	selectCaracterAction    = "select-character"
 	equipInventoryAction    = "equip-inventory"
 	selectProficiencyAction = "select-proficiency"
@@ -93,6 +96,27 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 	}
 }
 
+func (c *Character) GetDNDApplicationCommand() *discordgo.ApplicationCommand {
+	return &discordgo.ApplicationCommand{
+		Name:        "dnd",
+		Description: "Dungeons and Dragons commands",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "character",
+				Description: "Character commands",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "create",
+						Description: "Create a new character",
+						Type:        discordgo.ApplicationCommandOptionSubCommand,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -111,6 +135,14 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				c.handleAttack(s, i)
 			case "encounter":
 				c.handleEncounterCreate(s, i)
+			}
+		case "dnd":
+			switch i.ApplicationCommandData().Options[0].Name {
+			case "character":
+				switch i.ApplicationCommandData().Options[0].Options[0].Name {
+				case "create":
+					c.handleNewCharacter(s, i)
+				}
 			}
 		}
 	case discordgo.InteractionMessageComponent:

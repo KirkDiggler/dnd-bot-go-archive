@@ -52,6 +52,59 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	return choices, nil
 }
 
+func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Handling new character")
+	initialState := &entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepSelect,
+	}
+
+	_, err := c.charManager.SaveState(context.Background(), initialState)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = c.renderState(s, i, initialState)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (c *Character) createRaceOptions() []discordgo.SelectMenuOption {
+	races, err := c.client.ListRaces()
+	if err != nil {
+		log.Println(err)
+		return make([]discordgo.SelectMenuOption, 0)
+	}
+	raceOptions := make([]discordgo.SelectMenuOption, len(races))
+	for idx, race := range races {
+		raceOptions[idx] = discordgo.SelectMenuOption{
+			Label: race.Name,
+			Value: fmt.Sprintf("race:%d:%s", idx, race.Key),
+		}
+	}
+
+	return raceOptions
+}
+
+func (c *Character) createClassOptions() []discordgo.SelectMenuOption {
+	classes, err := c.client.ListClasses()
+	if err != nil {
+		log.Println(err)
+		return make([]discordgo.SelectMenuOption, 0)
+	}
+	classOptions := make([]discordgo.SelectMenuOption, len(classes))
+	for idx, class := range classes {
+		classOptions[idx] = discordgo.SelectMenuOption{
+			Label: class.Name,
+			Value: fmt.Sprintf("class:%d:%s", idx, class.Key),
+		}
+	}
+
+	return classOptions
+}
+
 // Selecting a character
 func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	choices, err := c.startNewChoices(4)
@@ -101,6 +154,45 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		fmt.Println(err)
 	}
 
+}
+
+func (c *Character) renderState(s *discordgo.Session, i *discordgo.InteractionCreate, state *entities.CharacterCreation) error {
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Create your character:",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.SelectMenu{
+							CustomID:    "select_race",
+							Placeholder: "Select your race",
+							Options:     c.createRaceOptions(),
+						},
+						discordgo.SelectMenu{
+							CustomID:    "select_class",
+							Placeholder: "Select your class",
+							Options:     c.createClassOptions(),
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    "input_name",
+							Style:       discordgo.TextInputShort,
+							Label:       "Enter your character's name",
+							Placeholder: "Name",
+							Required:    true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return s.InteractionRespond(i.Interaction, response)
 }
 
 func (c *Character) initializeCharacter(charID string) error {
