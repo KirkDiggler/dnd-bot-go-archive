@@ -154,7 +154,8 @@ func (r *Redis) JoinSessionRoll(ctx context.Context, input *JoinSessionRollInput
 	}
 
 	roll.Players = append(roll.Players, &ronnied.Player{
-		ID: input.PlayerID,
+		ID:   input.PlayerID,
+		Name: input.PlayerName,
 	})
 
 	rollBytes, err := json.Marshal(roll)
@@ -204,7 +205,8 @@ func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
 	}
 
 	session.Players = append(session.Players, &ronnied.Player{
-		ID: input.PlayerID,
+		ID:   input.PlayerID,
+		Name: input.PlayerName,
 	})
 
 	sessionBytes, err := json.Marshal(session)

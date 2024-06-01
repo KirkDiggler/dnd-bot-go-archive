@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/encounter"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/game"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/ronnied/session"
 	"github.com/redis/go-redis/v9"
@@ -92,11 +93,19 @@ func main() {
 		panic(err)
 	}
 
+	encounterRepo, err := encounter.NewRedis(&encounter.RedisConfig{
+		Client: redisClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	charManager, err := characters.New(&characters.Config{
 		Client:        dnd5eClient,
 		CharacterRepo: charRepo,
 		StateRepo:     stateRepo,
 		ChoiceRepo:    choiceRepo,
+		EncounterRepo: encounterRepo,
 	})
 	if err != nil {
 		panic(err)

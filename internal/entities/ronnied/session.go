@@ -13,8 +13,8 @@ const (
 )
 
 type Player struct {
-	ID    string
-	MsgID string
+	ID   string
+	Name string
 }
 type Session struct {
 	ID          string
@@ -63,14 +63,6 @@ func (sr *SessionRoll) HasPlayerEntry(playerID string) *SessionEntry {
 	return nil
 }
 
-func (sr *SessionRoll) UpdatePlayerMsgID(playerID, msgID string) {
-	for _, player := range sr.Players {
-		if player.ID == playerID {
-			player.MsgID = msgID
-		}
-	}
-}
-
 // LoserEntires the entries that have the lowest score
 func (sr *SessionRoll) IsLoser(input *SessionEntry) bool {
 	lowestRoll := 6
@@ -95,7 +87,7 @@ func (sr *SessionRoll) IsComplete() bool {
 	}
 
 	for _, entry := range sr.Entries {
-		if !entry.Completed {
+		if !entry.IsComplete() {
 			return false
 		}
 	}
@@ -116,6 +108,17 @@ func (se *SessionEntry) Complete() {
 	se.Completed = true
 }
 
+func (se *SessionEntry) IsComplete() bool {
+	if se.Roll == 0 {
+		return false
+	}
+
+	if se.Roll == 6 && se.AssignedTo == "" {
+		return false
+	}
+
+	return true
+}
 func (se *SessionEntry) String() string {
 	return fmt.Sprintf("Roll: %d", se.Roll)
 }

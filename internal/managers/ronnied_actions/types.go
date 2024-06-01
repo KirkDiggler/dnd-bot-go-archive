@@ -122,6 +122,7 @@ type JoinSessionInput struct {
 	SessionID     string
 	SessionRollID string
 	PlayerID      string
+	PlayerName    string
 }
 
 type JoinSessionOutput struct {

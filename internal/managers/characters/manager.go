@@ -2,6 +2,7 @@ package characters
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/encounter"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
 
@@ -14,10 +15,11 @@ import (
 )
 
 type manager struct {
-	charRepo   character.Repository
-	stateRepo  character_creation.Repository
-	choiceRepo choice.Repository
-	client     dnd5e.Client
+	charRepo      character.Repository
+	stateRepo     character_creation.Repository
+	choiceRepo    choice.Repository
+	encounterRepo encounter.Repository
+	client        dnd5e.Client
 }
 
 type Config struct {
@@ -25,6 +27,7 @@ type Config struct {
 	StateRepo     character_creation.Repository
 	ChoiceRepo    choice.Repository
 	Client        dnd5e.Client
+	EncounterRepo encounter.Repository
 }
 
 func New(cfg *Config) (Manager, error) {
@@ -47,13 +50,64 @@ func New(cfg *Config) (Manager, error) {
 	if cfg.ChoiceRepo == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.ChoiceRepo")
 	}
+	if cfg.EncounterRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.EncounterRepo")
+	}
 
 	return &manager{
-		charRepo:   cfg.CharacterRepo,
-		stateRepo:  cfg.StateRepo,
-		choiceRepo: cfg.ChoiceRepo,
-		client:     cfg.Client,
+		charRepo:      cfg.CharacterRepo,
+		stateRepo:     cfg.StateRepo,
+		choiceRepo:    cfg.ChoiceRepo,
+		client:        cfg.Client,
+		encounterRepo: cfg.EncounterRepo,
 	}, nil
+}
+
+func (m *manager) CreateEncounter(ctx context.Context, encounter *entities.Encounter) (*entities.Encounter, error) {
+	if encounter == nil {
+		return nil, dnderr.NewMissingParameterError("encounter")
+	}
+
+	if encounter.ID != "" {
+		return nil, dnderr.NewInvalidParameterError("encounter.ID", encounter.ID)
+	}
+
+	result, err := m.encounterRepo.Create(ctx, encounter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *manager) GetEncounter(ctx context.Context, id string) (*entities.Encounter, error) {
+	if id == "" {
+		return nil, dnderr.NewMissingParameterError("id")
+	}
+
+	result, err := m.encounterRepo.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *manager) UpdateEncounter(ctx context.Context, encounter *entities.Encounter) (*entities.Encounter, error) {
+	if encounter == nil {
+		return nil, dnderr.NewMissingParameterError("encounter")
+	}
+
+	if encounter.ID == "" {
+		return nil, dnderr.NewMissingParameterError("encounter.ID")
+	}
+
+	result, err := m.encounterRepo.Update(ctx, encounter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (m *manager) AddProficiency(ctx context.Context, char *entities.Character, reference *entities.ReferenceItem) (*entities.Character, error) {

@@ -211,10 +211,15 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 		return nil, dnderr.NewMissingParameterError("input.PlayerID")
 	}
 
+	if input.PlayerName == "" {
+		return nil, dnderr.NewMissingParameterError("input.PlayerName")
+	}
+
 	// join the session
 	result, err := m.sessionRepo.Join(ctx, &session.JoinInput{
-		SessionID: input.SessionID,
-		PlayerID:  input.PlayerID,
+		SessionID:  input.SessionID,
+		PlayerID:   input.PlayerID,
+		PlayerName: input.PlayerName,
 	})
 	if err != nil {
 		return nil, err
@@ -223,6 +228,7 @@ func (m *Manager) JoinSession(ctx context.Context, input *JoinSessionInput) (*Jo
 	rollResult, err := m.sessionRepo.JoinSessionRoll(ctx, &session.JoinSessionRollInput{
 		SessionRollID: input.SessionRollID,
 		PlayerID:      input.PlayerID,
+		PlayerName:    input.PlayerName,
 	})
 	if err != nil {
 		return nil, err

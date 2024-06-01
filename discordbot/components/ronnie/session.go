@@ -11,48 +11,41 @@ import (
 
 const socialGameID = "ronnie-rollem"
 
-func (c *RonnieD) handleSessionNew(s *discordgo.Session, i *discordgo.InteractionCreate, sessionRollID string) {
-	sessionRollResult, err := c.manager.GetSessionRoll(context.Background(), &ronnied_actions.GetSessionRollInput{
-		SessionRollID: sessionRollID,
-	})
-	if err != nil {
-		fmt.Println("Failed to get session roll:", err)
-		return
-	}
+//func (c *RonnieD) handleSessionNew(s *discordgo.Session, i *discordgo.InteractionCreate, sessionRollID string) {
+//	sessionRollResult, err := c.manager.GetSessionRoll(context.Background(), &ronnied_actions.GetSessionRollInput{
+//		SessionRollID: sessionRollID,
+//	})
+//	if err != nil {
+//		fmt.Println("Failed to get session roll:", err)
+//		return
+//	}
+//
+//	//session, err := c.manager.GetSession(context.Background(), &ronnied_actions.GetSessionInput{
+//	//	SessionID: sessionRollResult.SessionRoll.SessionID,
+//	//})
+//	//if err != nil {
+//	//	fmt.Println("Failed to get session:", err)
+//	//	return
+//	//}
+//	//
+//	//err = s.ChannelMessageDelete(i.ChannelID, session.Session.MessageID)
+//	//if err != nil {
+//	//	log.Println("Failed to delete message:", err)
+//	//}
+//
+//	c.SessionCreate(s, i)
+//}
 
-	//session, err := c.manager.GetSession(context.Background(), &ronnied_actions.GetSessionInput{
-	//	SessionID: sessionRollResult.SessionRoll.SessionID,
-	//})
-	//if err != nil {
-	//	fmt.Println("Failed to get session:", err)
-	//	return
-	//}
-	//
-	//err = s.ChannelMessageDelete(i.ChannelID, session.Session.MessageID)
-	//if err != nil {
-	//	log.Println("Failed to delete message:", err)
-	//}
+//func (c *RonnieD) SessionNew(s *discordgo.Session, i *discordgo.InteractionCreate) {
+//	// Cleanup the old messages and reset the exiusting message for the new session
+//	// Get the session ID from the CustomID
+//	data := i.MessageComponentData()
+//	sessionRollID := data.CustomID[len("new_session:"):]
+//
+//	log.Println("sessionRollID", sessionRollID)
+//	c.handleSessionNew(s, i, sessionRollID)
+//}
 
-	// get the players and delete the messages by MsgID
-	for _, player := range sessionRollResult.SessionRoll.Players {
-		err = s.ChannelMessageDelete(i.ChannelID, player.MsgID)
-		if err != nil {
-			log.Println("Failed to delete message:", err)
-		}
-	}
-
-	c.SessionCreate(s, i)
-}
-
-func (c *RonnieD) SessionNew(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// Cleanup the old messages and reset the exiusting message for the new session
-	// Get the session ID from the CustomID
-	data := i.MessageComponentData()
-	sessionRollID := data.CustomID[len("new_session:"):]
-
-	log.Println("sessionRollID", sessionRollID)
-	c.handleSessionNew(s, i, sessionRollID)
-}
 func (c *RonnieD) SessionJoin(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Get the session ID from the CustomID
 	data := i.MessageComponentData()
@@ -67,11 +60,18 @@ func (c *RonnieD) SessionJoin(s *discordgo.Session, i *discordgo.InteractionCrea
 		return
 	}
 
+	user, err := s.User(i.Member.User.ID)
+	if err != nil {
+		log.Println("Failed to get user:", err)
+		return
+	}
+
 	// Join the session
 	joinResult, err := c.manager.JoinSession(context.Background(), &ronnied_actions.JoinSessionInput{
 		SessionID:     sessionRollResult.SessionRoll.SessionID,
 		SessionRollID: sessionRollResult.SessionRoll.ID,
 		PlayerID:      i.Member.User.ID,
+		PlayerName:    user.Username,
 	})
 	if err != nil {
 		fmt.Println("Failed to join session:", err)
@@ -108,13 +108,6 @@ func (c *RonnieD) SessionJoin(s *discordgo.Session, i *discordgo.InteractionCrea
 	if err != nil {
 		log.Println("Failed to respond to interaction:", err)
 	}
-
-	msg, err := s.InteractionResponse(i.Interaction)
-	if err != nil {
-		log.Println("Failed to get interaction response:", err)
-	}
-
-	joinResult.SessionRoll.UpdatePlayerMsgID(i.Member.User.ID, msg.ID)
 
 	// Update the Player with the message id
 	_, err = c.manager.UpdateSessionRoll(context.Background(), &ronnied_actions.UpdateSessionRollInput{
@@ -297,15 +290,6 @@ func (c *RonnieD) SessionRoll(s *discordgo.Session, i *discordgo.InteractionCrea
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: content,
-			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					&discordgo.Button{
-						Label:    "Continue",
-						CustomID: "session_continue:" + sessionRollID,
-						Style:    discordgo.PrimaryButton,
-					},
-				}},
-			},
 		},
 	})
 	if err != nil {
@@ -430,15 +414,6 @@ func (c *RonnieD) SessionAssignDrink(s *discordgo.Session, i *discordgo.Interact
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: fmt.Sprintf("You assigned the drink to <@%s>.", assignedPlayerID),
-			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					&discordgo.Button{
-						Label:    "Continue",
-						CustomID: "session_continue:" + sessionRollID,
-						Style:    discordgo.PrimaryButton,
-					},
-				}},
-			},
 		},
 	})
 	if err != nil {
@@ -481,16 +456,13 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 	playerResults := make(map[string]*results)
 
 	for _, participant := range sessionRollResult.SessionRoll.Players {
-		user, userErr := s.User(participant.ID)
-		if userErr != nil {
-			log.Println("Failed to get user:", userErr)
-			break
-		}
-
 		playerResults[participant.ID] = &results{
-			player: user.Username,
 			drinks: 0,
+			player: participant.Name,
 		}
+	}
+
+	for _, participant := range sessionRollResult.SessionRoll.Players {
 		// add green checkmark icon if the entry is completed
 		var content string
 
@@ -512,30 +484,23 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 				}
 			}
 
-			user, userErr = s.User(entry.PlayerID)
-			if userErr != nil {
-				log.Println("Failed to get user:", userErr)
-				continue
-			}
-
 			if entry.AssignedTo != "" {
 				if _, ok := playerResults[entry.AssignedTo]; !ok {
 					log.Println("Assigned user not found:", entry.AssignedTo, " adding to results")
-				}
-
-				playerResults[entry.AssignedTo] = &results{
-					player: entry.AssignedTo,
-					drinks: 0,
+					playerResults[entry.AssignedTo] = &results{
+						player: entry.AssignedTo,
+						drinks: 0,
+					}
 				}
 
 				playerResults[entry.AssignedTo].drinks += 1
-				assignedUser, userErr := s.User(entry.AssignedTo)
-				if userErr != nil {
-					log.Println("Failed to get user:", userErr)
+				assignedUser, assignedUserErr := s.User(entry.AssignedTo)
+				if assignedUserErr != nil {
+					log.Println("Failed to get user:", assignedUserErr)
 					continue
 				}
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   user.Username,
+					Name:   participant.Name,
 					Value:  content + fmt.Sprintf("🎲 %d, 🍻 %s", entry.Roll, assignedUser.Username),
 					Inline: true,
 				})
@@ -544,7 +509,7 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 			}
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   user.Username,
+				Name:   participant.Name,
 				Value:  content + fmt.Sprintf("🎲 %d", entry.Roll),
 				Inline: true,
 			})
@@ -552,7 +517,7 @@ func (c *RonnieD) updateGameMessage(s *discordgo.Session, i *discordgo.Interacti
 
 		if addDefault {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   user.Username,
+				Name:   participant.Name,
 				Value:  "waiting for roll",
 				Inline: true,
 			})
@@ -679,7 +644,7 @@ func (c *RonnieD) sendGameStartMessage(s *discordgo.Session, i *discordgo.Intera
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Components: []discordgo.MessageComponent{
-				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{joinButton, newButton}},
+				&discordgo.ActionsRow{Components: []discordgo.MessageComponent{newButton, joinButton}},
 			},
 		},
 	})
