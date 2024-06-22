@@ -173,6 +173,30 @@ func (c *RonnieD) SessionJoinReserved(s *discordgo.Session, i *discordgo.Interac
 	data := i.MessageComponentData()
 	sessionRollID := data.CustomID[len("join_reserved_session:"):]
 	log.Println("sessionRollID", sessionRollID)
+	sessionRollResult, err := c.manager.GetSessionRoll(context.Background(), &ronnied_actions.GetSessionRollInput{
+		SessionRollID: sessionRollID,
+	})
+	if err != nil {
+		fmt.Println("Failed to get session roll:", err)
+		return
+	}
+
+	// Check if the player is part of the session
+	if player := sessionRollResult.SessionRoll.HasPlayer(i.Member.User.ID); player == nil {
+		respondErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
+				Content: "Sir ... Sir you are not part of this session.",
+			},
+		})
+		if respondErr != nil {
+			log.Println("Failed to respond to interaction:", respondErr)
+		}
+
+		return
+	}
+
 	c.sessionJoin(s, i, sessionRollID)
 }
 

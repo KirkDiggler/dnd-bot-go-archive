@@ -155,7 +155,7 @@ func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput
 	}
 
 	roll := rand.Intn(6) + 1
-	roll = 5
+
 	result, err := m.sessionRepo.AddEntry(ctx, &session.AddEntryInput{
 		SessionRollID: input.SessionRollID,
 		PlayerID:      input.PlayerID,
