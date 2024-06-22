@@ -150,7 +150,10 @@ func (r *Redis) JoinSessionRoll(ctx context.Context, input *JoinSessionRollInput
 	}
 
 	if player := roll.HasPlayer(input.PlayerID); player != nil {
-		return nil, dnderr.NewAlreadyExistsError("player already in roll")
+		// we will just return the session here
+		return &JoinSessionRollOutput{
+			SessionRoll: roll,
+		}, nil
 	}
 
 	roll.Players = append(roll.Players, &ronnied.Player{
@@ -201,7 +204,9 @@ func (r *Redis) Join(ctx context.Context, input *JoinInput) (*JoinOutput, error)
 	}
 
 	if player := session.HasPlayer(input.PlayerID); player != nil {
-		return nil, dnderr.NewAlreadyExistsError("player already in session")
+		return &JoinOutput{
+			Session: session,
+		}, nil
 	}
 
 	session.Players = append(session.Players, &ronnied.Player{
@@ -265,6 +270,19 @@ func (r *Redis) CreateRoll(ctx context.Context, input *CreateRollInput) (*Create
 		return nil, err
 	}
 
+	// add the sessioRoll to list of session rolls
+	session.SessionRollIDs = append(session.SessionRollIDs, roll.ID)
+
+	sessionBytes, err := json.Marshal(session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.client.Set(ctx, sessionKey, string(sessionBytes), 0).Err()
+	if err != nil {
+		return nil, err
+	}
+
 	return &CreateRollOutput{
 		SessionRoll: roll,
 	}, nil
@@ -323,6 +341,48 @@ func (r *Redis) GetSessionRoll(ctx context.Context, input *GetSessionRollInput) 
 
 	return &GetSessionRollOutput{
 		SessionRoll: roll,
+	}, nil
+}
+
+func (r *Redis) ListSessionRolls(ctx context.Context, input *ListSessionRollsInput) (*ListSessionRollsOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	sessionKey := getSessionKey(input.SessionID)
+
+	sessionJson, err := r.client.Get(ctx, sessionKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	session := &ronnied.Session{}
+	err = json.Unmarshal([]byte(sessionJson), session)
+	if err != nil {
+		return nil, err
+	}
+
+	rolls := make([]*ronnied.SessionRoll, len(session.SessionRollIDs))
+
+	for _, sessionRollID := range session.SessionRollIDs {
+		rollKey := getSessionRollKey(sessionRollID)
+
+		rollJson, rollErr := r.client.Get(ctx, rollKey).Result()
+		if rollErr != nil {
+			return nil, rollErr
+		}
+
+		roll := &ronnied.SessionRoll{}
+		rollErr = json.Unmarshal([]byte(rollJson), roll)
+		if rollErr != nil {
+			return nil, rollErr
+		}
+
+		rolls = append(rolls, roll)
+	}
+
+	return &ListSessionRollsOutput{
+		SessionRolls: rolls,
 	}, nil
 }
 
