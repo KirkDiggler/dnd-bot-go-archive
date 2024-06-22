@@ -2,7 +2,9 @@ package ronnie
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities/ronnied"
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/ronnied_actions"
 	"github.com/bwmarrin/discordgo"
@@ -73,7 +75,7 @@ func (c *RonnieD) SessionJoin(s *discordgo.Session, i *discordgo.InteractionCrea
 		PlayerID:      i.Member.User.ID,
 		PlayerName:    user.Username,
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, internal.ErrAlreadyExists) {
 		fmt.Println("Failed to join session:", err)
 		respondErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
