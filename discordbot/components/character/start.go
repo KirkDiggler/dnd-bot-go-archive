@@ -170,6 +170,10 @@ func (c *Character) renderState(s *discordgo.Session, i *discordgo.InteractionCr
 							Placeholder: "Select your race",
 							Options:     c.createRaceOptions(),
 						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
 						discordgo.SelectMenu{
 							CustomID:    "select_class",
 							Placeholder: "Select your class",

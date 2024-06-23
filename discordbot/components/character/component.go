@@ -68,7 +68,7 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 		Description: "Generate a character",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
-				Name:        "random",
+				Name:        "new",
 				Description: "Put a new character from a random list",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
@@ -99,12 +99,12 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 func (c *Character) GetDNDApplicationCommand() *discordgo.ApplicationCommand {
 	return &discordgo.ApplicationCommand{
 		Name:        "dnd",
-		Description: "Dungeons and Dragons commands",
+		Description: "DnD commands",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "character",
-				Description: "Character commands",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Description: "Character related commands",
+				Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
 				Options: []*discordgo.ApplicationCommandOption{
 					{
 						Name:        "create",
