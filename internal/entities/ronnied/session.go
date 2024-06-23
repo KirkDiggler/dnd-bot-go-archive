@@ -17,12 +17,13 @@ type Player struct {
 	Name string
 }
 type Session struct {
-	ID          string
-	MessageID   string // TODO: move to SessionRoll
-	SessionDate *time.Time
-	GameID      string
-	Players     []*Player
-	StartedDate *time.Time
+	ID             string
+	MessageID      string // TODO: move to SessionRoll
+	SessionDate    *time.Time
+	GameID         string
+	Players        []*Player
+	StartedDate    *time.Time
+	SessionRollIDs []string
 }
 
 func (s *Session) HasPlayer(playerID string) *Player {
@@ -93,6 +94,42 @@ func (sr *SessionRoll) IsComplete() bool {
 	}
 
 	return true
+}
+
+func (sr *SessionRoll) GetLosers() []*SessionEntry {
+	lowestRoll := 6
+	for _, entry := range sr.Entries {
+		if entry.Roll < lowestRoll {
+			lowestRoll = entry.Roll
+		}
+	}
+
+	var losers []*SessionEntry
+	for _, entry := range sr.Entries {
+		if entry.Roll == lowestRoll {
+			losers = append(losers, entry)
+		}
+	}
+
+	return losers
+}
+
+func (sr *SessionRoll) GetWinners() []*SessionEntry {
+	highestRoll := 0
+	for _, entry := range sr.Entries {
+		if entry.Roll > highestRoll {
+			highestRoll = entry.Roll
+		}
+	}
+
+	var winners []*SessionEntry
+	for _, entry := range sr.Entries {
+		if entry.Roll == highestRoll {
+			winners = append(winners, entry)
+		}
+	}
+
+	return winners
 }
 
 type SessionEntry struct {

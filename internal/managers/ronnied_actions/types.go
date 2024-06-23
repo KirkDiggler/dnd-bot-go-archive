@@ -96,10 +96,19 @@ type CreateSessionRollInput struct {
 	SessionID    string
 	Type         ronnied.RollType
 	Participants []string
+	Players      []*ronnied.Player
 }
 
 type CreateSessionRollOutput struct {
 	SessionRoll *ronnied.SessionRoll
+}
+
+type ListSessionRollsInput struct {
+	SessionID string
+}
+
+type ListSessionRollsOutput struct {
+	SessionRolls []*ronnied.SessionRoll
 }
 
 type GetSessionRollInput struct {

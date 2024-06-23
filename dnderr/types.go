@@ -1,6 +1,9 @@
 package dnderr
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/KirkDiggler/dnd-bot-go/internal"
+)
 
 type AlreadyExistsError struct {
 	Msg string
@@ -8,6 +11,10 @@ type AlreadyExistsError struct {
 
 func (e *AlreadyExistsError) Error() string {
 	return e.Msg
+}
+
+func (e *AlreadyExistsError) Unwrap() error {
+	return internal.ErrAlreadyExists
 }
 
 func NewAlreadyExistsError(msg string) error {

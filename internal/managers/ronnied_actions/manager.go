@@ -43,6 +43,47 @@ func NewManager(cfg *ManagerConfig) (*Manager, error) {
 	}, nil
 }
 
+func (m *Manager) CreateSession(ctx context.Context, input *CreateSessionInput) (*CreateSessionOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.GameID == "" {
+		return nil, dnderr.NewMissingParameterError("input.GameID")
+	}
+
+	// check that this game exists
+	_, err := m.gameRepo.Get(ctx, &game.GetInput{
+		ID: input.GameID,
+	})
+	if err != nil {
+		if errors.Is(err, internal.ErrRecordNotFound) {
+			_, err = m.gameRepo.Create(ctx, &game.CreateInput{
+				Game: &ronnied.Game{
+					ID:   input.GameID,
+					Name: input.GameID,
+				}})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return nil, err
+	}
+
+	// create a session
+	result, err := m.sessionRepo.Create(ctx, &session.CreateInput{
+		GameID: input.GameID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateSessionOutput{
+		Session: result.Session,
+	}, nil
+}
+
 func (m *Manager) UpdateSession(ctx context.Context, input *UpdateSessionInput) (*UpdateSessionOutput, error) {
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
@@ -110,10 +151,11 @@ func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput
 	}
 
 	if entry := sessionRollResult.SessionRoll.HasPlayerEntry(input.PlayerID); entry != nil {
-		return nil, dnderr.NewInvalidEntityError("player has already rolled")
+		return nil, dnderr.NewInvalidEntityError("sir... sir... you have already rolled")
 	}
 
 	roll := rand.Intn(6) + 1
+
 	result, err := m.sessionRepo.AddEntry(ctx, &session.AddEntryInput{
 		SessionRollID: input.SessionRollID,
 		PlayerID:      input.PlayerID,
@@ -130,48 +172,8 @@ func (m *Manager) AddSessionRoll(ctx context.Context, input *AddSessionRollInput
 	}, nil
 }
 
-func (m *Manager) CreateSession(ctx context.Context, input *CreateSessionInput) (*CreateSessionOutput, error) {
-	if input == nil {
-		return nil, dnderr.NewMissingParameterError("input")
-	}
-
-	if input.GameID == "" {
-		return nil, dnderr.NewMissingParameterError("input.GameID")
-	}
-
-	// check that this game exists
-	_, err := m.gameRepo.Get(ctx, &game.GetInput{
-		ID: input.GameID,
-	})
-	if err != nil {
-		if errors.Is(err, internal.ErrRecordNotFound) {
-			_, err = m.gameRepo.Create(ctx, &game.CreateInput{
-				Game: &ronnied.Game{
-					ID:   input.GameID,
-					Name: input.GameID,
-				}})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return nil, err
-	}
-
-	// create a session
-	result, err := m.sessionRepo.Create(ctx, &session.CreateInput{
-		GameID: input.GameID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &CreateSessionOutput{
-		Session: result.Session,
-	}, nil
-}
-
 func (m *Manager) CreateSessionRoll(ctx context.Context, input *CreateSessionRollInput) (*CreateSessionRollOutput, error) {
+	// TODO: take in []*ronnied.Player
 	if input == nil {
 		return nil, dnderr.NewMissingParameterError("input")
 	}
@@ -195,6 +197,27 @@ func (m *Manager) CreateSessionRoll(ctx context.Context, input *CreateSessionRol
 
 	return &CreateSessionRollOutput{
 		SessionRoll: rollResult.SessionRoll,
+	}, nil
+}
+
+func (m *Manager) ListSessionRolls(ctx context.Context, input *ListSessionRollsInput) (*ListSessionRollsOutput, error) {
+	if input == nil {
+		return nil, dnderr.NewMissingParameterError("input")
+	}
+
+	if input.SessionID == "" {
+		return nil, dnderr.NewMissingParameterError("input.SessionID")
+	}
+
+	result, err := m.sessionRepo.ListSessionRolls(ctx, &session.ListSessionRollsInput{
+		SessionID: input.SessionID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListSessionRollsOutput{
+		SessionRolls: result.SessionRolls,
 	}, nil
 }
 
@@ -395,7 +418,7 @@ func (m *Manager) JoinGame(ctx context.Context, input *JoinGameInput) (*JoinGame
 
 	for _, player := range result.Players {
 		if player == input.PlayerID {
-			return nil, dnderr.NewInvalidEntityError("player is already in the game")
+			return &JoinGameOutput{}, nil
 		}
 	}
 

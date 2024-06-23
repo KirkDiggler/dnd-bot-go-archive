@@ -18,4 +18,5 @@ type Interface interface {
 	GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error)
 	GetSession(ctx context.Context, input *GetSessionInput) (*GetSessionOutput, error)
 	AssignDrink(ctx context.Context, input *AssignDrinkInput) (*AssignDrinkOutput, error)
+	ListSessionRolls(ctx context.Context, input *ListSessionRollsInput) (*ListSessionRollsOutput, error)
 }

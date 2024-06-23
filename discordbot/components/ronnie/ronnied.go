@@ -732,57 +732,6 @@ func (c *RonnieD) PayDrink(s *discordgo.Session, i *discordgo.InteractionCreate)
 
 }
 
-func (c *RonnieD) JoinGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	data := i.ApplicationCommandData()
-	if data.Options[0].Name == "gamejoin" {
-		gameID := i.ChannelID
-		// Get the channel name
-		channel, err := s.Channel(i.ChannelID)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-		msg := fmt.Sprintf("You joined the game")
-
-		_, err = c.manager.JoinGame(context.Background(), &ronnied_actions.JoinGameInput{
-			GameID:   gameID,
-			GameName: channel.Name,
-			PlayerID: i.Member.User.ID,
-		})
-		if err != nil {
-			msg = err.Error()
-		}
-
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msg,
-			},
-		})
-		if err != nil {
-			log.Print(err)
-		}
-	}
-}
-
-func (c *RonnieD) CreateGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	data := i.ApplicationCommandData()
-	if data.Options[0].Name == "creategame" {
-		gameName := data.Options[0].Options[0].StringValue()
-
-		msg := fmt.Sprintf("Game %s created, ID: %d", gameName, rand.Intn(1000))
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msg,
-			},
-		})
-		if err != nil {
-			log.Print(err)
-		}
-	}
-}
-
 func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -839,6 +788,11 @@ func (c *RonnieD) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Int
 			data := i.MessageComponentData()
 			if strings.HasPrefix(data.CustomID, "join_session:") {
 				c.SessionJoin(s, i)
+				return
+			}
+
+			if strings.HasPrefix(data.CustomID, "join_reserved_session:") {
+				c.SessionJoinReserved(s, i)
 				return
 			}
 

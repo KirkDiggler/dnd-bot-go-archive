@@ -12,4 +12,5 @@ type Interface interface {
 	UpdateRoll(ctx context.Context, input *UpdateRollInput) (*UpdateRollOutput, error)
 	GetSessionRoll(ctx context.Context, input *GetSessionRollInput) (*GetSessionRollOutput, error)
 	AddEntry(ctx context.Context, input *AddEntryInput) (*AddEntryOutput, error)
+	ListSessionRolls(ctx context.Context, input *ListSessionRollsInput) (*ListSessionRollsOutput, error)
 }
