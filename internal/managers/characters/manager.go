@@ -200,22 +200,22 @@ func (m *manager) Put(ctx context.Context, character *entities.Character) (*enti
 	if character == nil {
 		return nil, dnderr.NewMissingParameterError("character")
 	}
-
-	if character.Name == "" {
-		return nil, dnderr.NewMissingParameterError("character.Name")
-	}
+	//
+	//if character.Name == "" {
+	//	return nil, dnderr.NewMissingParameterError("character.Name")
+	//}
 
 	if character.OwnerID == "" {
 		return nil, dnderr.NewMissingParameterError("character.OwnerID")
 	}
 
-	if character.Race == nil {
-		return nil, dnderr.NewMissingParameterError("character.Race")
-	}
-
-	if character.Class == nil {
-		return nil, dnderr.NewMissingParameterError("character.Class")
-	}
+	//if character.Race == nil {
+	//	return nil, dnderr.NewMissingParameterError("character.Race")
+	//}
+	//
+	//if character.Class == nil {
+	//	return nil, dnderr.NewMissingParameterError("character.Class")
+	//}
 
 	data, err := m.charRepo.Put(ctx, character)
 	if err != nil {

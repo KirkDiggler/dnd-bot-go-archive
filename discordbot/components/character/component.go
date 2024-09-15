@@ -19,6 +19,7 @@ const (
 	selectRaceAction        = "select-race"
 	selectClassAction       = "select-class"
 	setNameAction           = "set-name"
+	submitCharacterStart    = "submit-character-start"
 	selectCaracterAction    = "select-character"
 	equipInventoryAction    = "equip-inventory"
 	selectProficiencyAction = "select-proficiency"
@@ -141,6 +142,7 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			case "character":
 				switch i.ApplicationCommandData().Options[0].Options[0].Name {
 				case "create":
+					log.Println("create character")
 					c.handleNewCharacter(s, i)
 				}
 			}
@@ -154,6 +156,18 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		chaKey := fmt.Sprintf("%s:%s:Cha", selectAttributeKey, i.Member.User.ID)
 
 		switch i.MessageComponentData().CustomID {
+		case selectRaceAction:
+			log.Println("selectRaceAction")
+			c.handleRaceAndClassSelection(s, i)
+		case selectClassAction:
+			log.Println("selectClassAction")
+			c.handleRaceAndClassSelection(s, i)
+		case setNameAction:
+			log.Println("setNameAction")
+			c.handleNameCharacter(s, i)
+		case submitCharacterStart:
+			log.Println("submitCharacterStart")
+			handleSubmitNewCharacterInteraction(s, i)
 		case selectCaracterAction:
 			c.handleCharSelect(s, i)
 		case rollCharacterAction:
