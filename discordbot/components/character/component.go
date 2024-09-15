@@ -147,6 +147,11 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 				}
 			}
 		}
+	case discordgo.InteractionModalSubmit:
+		if i.ModalSubmitData().CustomID == "character_name_modal" {
+			c.handleNameCharacter(s, i)
+		}
+
 	case discordgo.InteractionMessageComponent:
 		strKey := fmt.Sprintf("%s:%s:Str", selectAttributeKey, i.Member.User.ID)
 		dexKey := fmt.Sprintf("%s:%s:Dex", selectAttributeKey, i.Member.User.ID)

@@ -209,7 +209,7 @@ func handleSubmitNewCharacterInteraction(s *discordgo.Session, i *discordgo.Inte
 	modal := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
-			CustomID: setNameAction,
+			CustomID: "character_name_modal",
 			Title:    "Enter Character Name",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
@@ -236,7 +236,7 @@ func handleSubmitNewCharacterInteraction(s *discordgo.Session, i *discordgo.Inte
 }
 
 func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	data := i.MessageComponentData()
+	data := i.ModalSubmitData()
 	log.Println("Handling name character", data)
 	name := ""
 	for _, component := range i.ModalSubmitData().Components {
@@ -261,14 +261,22 @@ func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.Inter
 		return
 	}
 
-	err = s.InteractionResponseDelete(i.Interaction)
+	log.Println("Character Name", char.Name)
+	lastState, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	log.Println("Character Name", char.Name)
-
+	oldInteraction := &discordgo.Interaction{
+		AppID: i.AppID,
+		Token: lastState.LastToken,
+	}
+	err = s.InteractionResponseDelete(oldInteraction)
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
+	}
 	c.handleRollCharacter(s, i)
 }
 
@@ -381,6 +389,16 @@ func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discord
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
+	}
+
+	_, err = c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: i.Member.User.ID,
+		LastToken:   i.Token,
+		Step:        entities.CreateStepRoll,
+	})
+	if err != nil {
+		log.Println(err)
+		return // TODO handle error
 	}
 
 	if state.Steps&entities.SelectRaceStep != 0 && state.Steps&entities.SelectClassStep != 0 {
