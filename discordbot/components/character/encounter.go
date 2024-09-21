@@ -3,9 +3,10 @@ package character
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/bwmarrin/discordgo"
-	"log"
 )
 
 type rederPlayerCardInput struct {
@@ -71,7 +72,7 @@ func (c *Character) renderPlayerCard(s *discordgo.Session, i *discordgo.Interact
 		embeds = append(embeds, embed)
 	case "attributes":
 		embed.Title = "Attributes"
-		for attr, score := range char.Attribues {
+		for attr, score := range char.Attributes {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   string(attr),
 				Value:  score.String(),

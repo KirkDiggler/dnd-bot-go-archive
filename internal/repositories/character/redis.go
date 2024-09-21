@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+
 	"github.com/redis/go-redis/v9"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
@@ -39,6 +40,10 @@ func getCharacterKey(id string) string {
 	return fmt.Sprintf("character:%s", id)
 }
 
+func getOwnerCharactersKey(ownerID string) string {
+	return fmt.Sprintf("owner:%s:characters", ownerID)
+}
+
 func (r *redisRepo) Get(ctx context.Context, id string) (*Data, error) {
 	if id == "" {
 		return nil, dnderr.NewMissingParameterError("id")
@@ -67,7 +72,7 @@ func (r *redisRepo) Put(ctx context.Context, character *entities.Character) (*en
 		return nil, dnderr.NewMissingParameterError("character.OwnerID")
 	}
 
-	character.ID = character.OwnerID
+	character.ID = r.uuider.New()
 	data := dataToJSON(characterToData(character))
 
 	result := r.client.Set(ctx, getCharacterKey(character.ID), data, 0)
@@ -75,5 +80,34 @@ func (r *redisRepo) Put(ctx context.Context, character *entities.Character) (*en
 		return nil, result.Err()
 	}
 
+	// Add character ID to the owner's list of characters
+	ownerCharactersKey := getOwnerCharactersKey(character.OwnerID)
+	if err := r.client.SAdd(ctx, ownerCharactersKey, character.ID).Err(); err != nil {
+		return nil, err
+	}
+
 	return character, nil
+}
+
+func (r *redisRepo) ListByOwner(ctx context.Context, ownerID string) ([]*Data, error) {
+	if ownerID == "" {
+		return nil, dnderr.NewMissingParameterError("ownerID")
+	}
+
+	ownerCharactersKey := getOwnerCharactersKey(ownerID)
+	characterIDs, err := r.client.SMembers(ctx, ownerCharactersKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var characters []*Data
+	for _, id := range characterIDs {
+		character, err := r.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		characters = append(characters, character)
+	}
+
+	return characters, nil
 }

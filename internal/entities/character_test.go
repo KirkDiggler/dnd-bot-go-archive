@@ -82,13 +82,13 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Character{
-				Attribues: tt.fields.AbilityScores,
+				Attributes: tt.fields.AbilityScores,
 			}
 
 			c.AddAbilityBonus(tt.args.abilityBonus)
 
-			if c.Attribues[tt.args.abilityBonus.Attribute].Bonus != tt.args.expectedBonus {
-				t.Errorf("expected bonus to be %d, got %d", tt.args.expectedBonus, c.Attribues[tt.args.abilityBonus.Attribute].Bonus)
+			if c.Attributes[tt.args.abilityBonus.Attribute].Bonus != tt.args.expectedBonus {
+				t.Errorf("expected bonus to be %d, got %d", tt.args.expectedBonus, c.Attributes[tt.args.abilityBonus.Attribute].Bonus)
 			}
 		})
 	}
@@ -170,21 +170,21 @@ func TestCharacter_AddAttribute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Character{
-				Attribues: tt.fields.AbilityScores,
+				Attributes: tt.fields.AbilityScores,
 			}
 
 			c.AddAttribute(tt.args.attribute, tt.args.abilityScore.Score)
 			_ = c.String()
-			if _, ok := c.Attribues[tt.args.attribute]; !ok {
+			if _, ok := c.Attributes[tt.args.attribute]; !ok {
 				t.Errorf("expected attribute %s to be present", tt.args.attribute)
 			}
 
-			if c.Attribues[tt.args.attribute].Score != tt.args.abilityScore.Score {
-				t.Errorf("expected score to be %d, got %d", tt.args.abilityScore.Score, c.Attribues[tt.args.attribute].Score)
+			if c.Attributes[tt.args.attribute].Score != tt.args.abilityScore.Score {
+				t.Errorf("expected score to be %d, got %d", tt.args.abilityScore.Score, c.Attributes[tt.args.attribute].Score)
 			}
 
-			if c.Attribues[tt.args.attribute].Bonus != tt.args.abilityScore.Bonus {
-				t.Errorf("expected bonus to be %d, got %d", tt.args.abilityScore.Bonus, c.Attribues[tt.args.attribute].Bonus)
+			if c.Attributes[tt.args.attribute].Bonus != tt.args.abilityScore.Bonus {
+				t.Errorf("expected bonus to be %d, got %d", tt.args.abilityScore.Bonus, c.Attributes[tt.args.attribute].Bonus)
 			}
 		})
 	}

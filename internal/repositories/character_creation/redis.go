@@ -3,6 +3,7 @@ package character_creation
 import (
 	"context"
 	"fmt"
+
 	"github.com/redis/go-redis/v9"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
@@ -57,7 +58,7 @@ func (r *redisRepo) Put(ctx context.Context, state *entities.CharacterCreation) 
 		return nil, dnderr.NewMissingParameterError("state")
 	}
 
-	result := r.client.Set(ctx, getCharacterCreationKey(state.CharacterID), characterCreateToJSON(state), 0)
+	result := r.client.Set(ctx, getCharacterCreationKey(state.OwnerID), characterCreateToJSON(state), 0)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}

@@ -111,6 +111,10 @@ func (c *Party) HandleInteractionCreate(s *discordgo.Session, i *discordgo.Inter
 
 	case discordgo.InteractionModalSubmit:
 		data := i.ModalSubmitData()
+		if !strings.HasPrefix(data.CustomID, "party-create-") {
+			return
+		}
+
 		msgBuilder := strings.Builder{}
 
 		partySize := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value

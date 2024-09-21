@@ -19,10 +19,10 @@ type Weapon struct {
 func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 	var bonus int
 	if w.WeaponRange == "Ranged" {
-		bonus = char.Attribues[AttributeDexterity].Bonus
+		bonus = char.Attributes[AttributeDexterity].Bonus
 	} else if w.WeaponRange == "Melee" {
 
-		bonus = char.Attribues[AttributeStrength].Bonus
+		bonus = char.Attributes[AttributeStrength].Bonus
 	}
 
 	// TODO: check proficiency

@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	selectRaceAction        = "select-race"
+	selectClassAction       = "select-class"
+	setNameAction           = "set-name"
+	submitCharacterStart    = "submit-character-start"
 	selectCaracterAction    = "select-character"
 	equipInventoryAction    = "equip-inventory"
 	selectProficiencyAction = "select-proficiency"
@@ -65,7 +69,7 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 		Description: "Generate a character",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
-				Name:        "random",
+				Name:        "new",
 				Description: "Put a new character from a random list",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			}, {
@@ -93,6 +97,27 @@ func (c *Character) GetApplicationCommand() *discordgo.ApplicationCommand {
 	}
 }
 
+func (c *Character) GetDNDApplicationCommand() *discordgo.ApplicationCommand {
+	return &discordgo.ApplicationCommand{
+		Name:        "dnd",
+		Description: "DnD commands",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "character",
+				Description: "Character related commands",
+				Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "create",
+						Description: "Create a new character",
+						Type:        discordgo.ApplicationCommandOptionSubCommand,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -112,7 +137,23 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 			case "encounter":
 				c.handleEncounterCreate(s, i)
 			}
+		case "dnd":
+			switch i.ApplicationCommandData().Options[0].Name {
+			case "character":
+				switch i.ApplicationCommandData().Options[0].Options[0].Name {
+				case "create":
+					log.Println("create character")
+					c.handleNewCharacter(s, i)
+				}
+			case "list":
+				c.handleListCharacters(s, i)
+			}
 		}
+	case discordgo.InteractionModalSubmit:
+		if i.ModalSubmitData().CustomID == "character_name_modal" {
+			c.handleNameCharacter(s, i)
+		}
+
 	case discordgo.InteractionMessageComponent:
 		strKey := fmt.Sprintf("%s:%s:Str", selectAttributeKey, i.Member.User.ID)
 		dexKey := fmt.Sprintf("%s:%s:Dex", selectAttributeKey, i.Member.User.ID)
@@ -122,6 +163,18 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 		chaKey := fmt.Sprintf("%s:%s:Cha", selectAttributeKey, i.Member.User.ID)
 
 		switch i.MessageComponentData().CustomID {
+		case selectRaceAction:
+			log.Println("selectRaceAction")
+			c.handleRaceAndClassSelection(s, i)
+		case selectClassAction:
+			log.Println("selectClassAction")
+			c.handleRaceAndClassSelection(s, i)
+		case setNameAction:
+			log.Println("setNameAction")
+			c.handleNameCharacter(s, i)
+		case submitCharacterStart:
+			log.Println("submitCharacterStart")
+			handleSubmitNewCharacterInteraction(s, i)
 		case selectCaracterAction:
 			c.handleCharSelect(s, i)
 		case rollCharacterAction:
@@ -210,7 +263,7 @@ func (c *Character) getAndUpdateState(input *entities.CharacterCreation) (*entit
 		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	existing, err := c.charManager.GetState(context.Background(), input.CharacterID)
+	existing, err := c.charManager.GetState(context.Background(), input.OwnerID)
 	if err != nil {
 		return nil, err
 	}

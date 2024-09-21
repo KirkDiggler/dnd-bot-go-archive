@@ -52,7 +52,7 @@ func (s *managerSuite) SetupTest() {
 		OwnerID: s.id,
 		Race:    s.race,
 		Class:   s.class,
-		Attribues: map[entities.Attribute]*entities.AbilityScore{
+		Attributes: map[entities.Attribute]*entities.AbilityScore{
 			entities.AttributeStrength:     {Score: 16},
 			entities.AttributeDexterity:    {Score: 15},
 			entities.AttributeConstitution: {Score: 14},

@@ -59,7 +59,7 @@ func (m *manager) characterFromData(ctx context.Context, data *character.Data) (
 		NextLevel:        data.NextLevel,
 		Race:             race,
 		Class:            class,
-		Attribues:        attributDataToAttributes(data.Attributes),
+		Attributes:       attributDataToAttributes(data.Attributes),
 		Rolls:            rollDatasToRollResults(data.Rolls),
 	}
 
@@ -169,7 +169,7 @@ func characterToData(input *entities.Character) *character.Data {
 		OwnerID:       input.OwnerID,
 		RaceKey:       input.Race.Key,
 		ClassKey:      input.Class.Key,
-		Attributes:    attributesToAttributeData(input.Attribues),
+		Attributes:    attributesToAttributeData(input.Attributes),
 		Rolls:         rollResultsToRollDatas(input.Rolls),
 		Proficiencies: proficienciesToDatas(input.Proficiencies),
 		Inventory:     equipmentsToDatas(input.Inventory),
