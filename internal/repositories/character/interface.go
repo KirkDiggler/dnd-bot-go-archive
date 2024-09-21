@@ -9,4 +9,5 @@ import (
 type Repository interface {
 	Put(ctx context.Context, character *entities.Character) (*entities.Character, error)
 	Get(ctx context.Context, id string) (*Data, error)
+	ListByOwner(ctx context.Context, ownerID string) ([]*Data, error)
 }

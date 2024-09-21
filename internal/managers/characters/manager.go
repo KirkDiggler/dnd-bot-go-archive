@@ -198,6 +198,29 @@ func (m *manager) GetChoices(ctx context.Context, characterID string, choiceType
 	return data.Choices, nil
 }
 
+func (m *manager) List(ctx context.Context, ownerID string) ([]*entities.Character, error) {
+	if ownerID == "" {
+		return nil, dnderr.NewMissingParameterError("ownerID")
+	}
+
+	dataList, err := m.charRepo.ListByOwner(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+
+	characters := make([]*entities.Character, len(dataList))
+	for idx, data := range dataList {
+		character, err := m.characterFromData(ctx, data)
+		if err != nil {
+			return nil, err
+		}
+
+		characters[idx] = character
+	}
+
+	return characters, nil
+}
+
 func (m *manager) Put(ctx context.Context, character *entities.Character) (*entities.Character, error) {
 	if character == nil {
 		return nil, dnderr.NewMissingParameterError("character")
@@ -258,6 +281,10 @@ func (m *manager) SaveState(ctx context.Context, state *entities.CharacterCreati
 
 	if state.CharacterID == "" {
 		return nil, dnderr.NewMissingParameterError("state.PlayerID")
+	}
+
+	if state.OwnerID == "" {
+		return nil, dnderr.NewMissingParameterError("state.OwnerID")
 	}
 
 	result, err := m.stateRepo.Put(ctx, state)

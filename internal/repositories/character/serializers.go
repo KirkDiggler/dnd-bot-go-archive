@@ -50,7 +50,7 @@ func characterToData(input *entities.Character) *Data {
 		Cha: &AbilityScoreData{},
 	}
 
-	for key, attr := range input.Attribues {
+	for key, attr := range input.Attributes {
 		switch key {
 		case entities.AttributeStrength:
 			data.Str = abilityScoreToData(attr)
@@ -144,7 +144,7 @@ func equippedSlotsToDatas(input map[entities.Slot]entities.Equipment) map[entiti
 		if data == nil {
 			continue
 		}
-		
+
 		datas[k] = data
 	}
 

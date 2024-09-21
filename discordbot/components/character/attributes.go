@@ -28,7 +28,15 @@ func rollAttributes() ([]*dice.RollResult, error) {
 
 // Setting Attributes
 func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.InteractionCreate, attribute string, selectSlice []string) {
-	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	log.Println("state: ", state.String())
+
+	char, err := c.charManager.Get(context.Background(), state.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
@@ -46,7 +54,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 	// TODO: make set attribut function that returns bool if it was set
 	if !char.Rolls[idx].Used { // We have not used this one
 		char.AddAttribute(entities.Attribute(attribute), char.Rolls[idx].Total-char.Rolls[idx].Lowest)
-		log.Printf("setting %s to %s ", attribute, char.Attribues[entities.Attribute(attribute)])
+		log.Printf("setting %s to %s ", attribute, char.Attributes[entities.Attribute(attribute)])
 		char.Rolls[idx].Used = true
 		// TODO Calculate modifiers
 	}
@@ -74,8 +82,9 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		msgBuilder.WriteString(fmt.Sprintf("%d, ", roll.Total-roll.Lowest))
 	}
 
-	state, err := c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
+	state, err = c.getAndUpdateState(&entities.CharacterCreation{
+		CharacterID: char.ID,
+		OwnerID:     i.Member.User.ID,
 		LastToken:   i.Token,
 		Step:        entities.CreateStepRoll,
 	})
@@ -120,7 +129,7 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 
 	selected := make(map[entities.Attribute]*entities.AbilityScore)
 
-	for k, v := range char.Attribues {
+	for k, v := range char.Attributes {
 		selected[k] = v
 	}
 
@@ -201,8 +210,13 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 }
 
 func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("Rolling for", i.Member.User.Username)
-	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	char, err := c.charManager.Get(context.Background(), state.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
@@ -213,7 +227,8 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 	log.Println("Rolling for", char.Name, "the ", char.Race.Key, " ", char.Class.Key)
 
 	_, err = c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
+		CharacterID: char.ID,
+		OwnerID:     i.Member.User.ID,
 		LastToken:   i.Token,
 		Step:        entities.CreateStepRoll,
 	})

@@ -27,7 +27,7 @@ type Character struct {
 	Speed              int
 	Race               *Race
 	Class              *Class
-	Attribues          map[Attribute]*AbilityScore
+	Attributes         map[Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
@@ -109,7 +109,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 }
 
 func (c *Character) improvisedMelee() (*attack.Result, error) {
-	bonus := c.Attribues[AttributeStrength].Bonus
+	bonus := c.Attributes[AttributeStrength].Bonus
 	attackRoll, err := dice.Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
@@ -186,25 +186,25 @@ func (c *Character) calculateAC() {
 				c.AC = armor.ArmorClass.Base
 				if armor.ArmorClass.DexBonus {
 					// TODO: load max and bonus and limit id applicable
-					c.AC += c.Attribues[AttributeDexterity].Bonus
+					c.AC += c.Attributes[AttributeDexterity].Bonus
 				}
 				continue
 			}
 
 			c.AC += armor.ArmorClass.Base
 			if armor.ArmorClass.DexBonus {
-				c.AC += c.Attribues[AttributeDexterity].Bonus
+				c.AC += c.Attributes[AttributeDexterity].Bonus
 			}
 		}
 	}
 }
 
 func (c *Character) SetHitpoints() {
-	if c.Attribues == nil {
+	if c.Attributes == nil {
 		return
 	}
 
-	if c.Attribues[AttributeConstitution] == nil {
+	if c.Attributes[AttributeConstitution] == nil {
 		return
 	}
 
@@ -212,18 +212,18 @@ func (c *Character) SetHitpoints() {
 		return
 	}
 
-	c.MaxHitPoints = c.HitDie + c.Attribues[AttributeConstitution].Bonus
+	c.MaxHitPoints = c.HitDie + c.Attributes[AttributeConstitution].Bonus
 	c.CurrentHitPoints = c.MaxHitPoints
 }
 
 func (c *Character) AddAttribute(attr Attribute, score int) {
-	if c.Attribues == nil {
-		c.Attribues = make(map[Attribute]*AbilityScore)
+	if c.Attributes == nil {
+		c.Attributes = make(map[Attribute]*AbilityScore)
 	}
 
 	bonus := 0
-	if _, ok := c.Attribues[attr]; ok {
-		bonus = c.Attribues[attr].Bonus
+	if _, ok := c.Attributes[attr]; ok {
+		bonus = c.Attributes[attr].Bonus
 	}
 	abilityScore := &AbilityScore{
 		Score: score,
@@ -254,18 +254,18 @@ func (c *Character) AddAttribute(attr Attribute, score int) {
 		abilityScore.Bonus += 5
 	}
 
-	c.Attribues[attr] = abilityScore
+	c.Attributes[attr] = abilityScore
 }
 func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
-	if c.Attribues == nil {
-		c.Attribues = make(map[Attribute]*AbilityScore)
+	if c.Attributes == nil {
+		c.Attributes = make(map[Attribute]*AbilityScore)
 	}
 
-	if _, ok := c.Attribues[ab.Attribute]; !ok {
-		c.Attribues[ab.Attribute] = &AbilityScore{}
+	if _, ok := c.Attributes[ab.Attribute]; !ok {
+		c.Attributes[ab.Attribute] = &AbilityScore{}
 	}
 
-	c.Attribues[ab.Attribute] = c.Attribues[ab.Attribute].AddBonus(ab.Bonus)
+	c.Attributes[ab.Attribute] = c.Attributes[ab.Attribute].AddBonus(ab.Bonus)
 }
 
 func (c *Character) AddInventory(e Equipment) {
@@ -296,11 +296,11 @@ func (c *Character) AddProficiency(p *Proficiency) {
 }
 
 func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
-	if c.Attribues == nil {
-		c.Attribues = make(map[Attribute]*AbilityScore)
+	if c.Attributes == nil {
+		c.Attributes = make(map[Attribute]*AbilityScore)
 	}
 
-	c.Attribues[attr] = c.Attribues[attr].AddBonus(bonus)
+	c.Attributes[attr] = c.Attributes[attr].AddBonus(bonus)
 }
 
 func (c *Character) NameString() string {
@@ -348,10 +348,10 @@ func (c *Character) String() string {
 
 	msg.WriteString("\n**Attributes**:\n")
 	for _, attr := range Attributes {
-		if c.Attribues[attr] == nil {
+		if c.Attributes[attr] == nil {
 			continue
 		}
-		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, c.Attribues[attr]))
+		msg.WriteString(fmt.Sprintf("  -  %s: %s\n", attr, c.Attributes[attr]))
 	}
 
 	msg.WriteString("\n**Proficiencies**:\n")

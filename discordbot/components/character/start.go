@@ -52,22 +52,64 @@ func (c *Character) startNewChoices(number int) ([]*charChoice, error) {
 	return choices, nil
 }
 
-func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("Handling new character")
-	initialState := &entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
-		LastToken:   i.Token,
+func (c *Character) handleListCharacters(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Handling list characters")
+	characters, err := c.charManager.List(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
 	}
 
-	_, err := c.charManager.Put(context.Background(), &entities.Character{
+	// Create select menu options from the list of characters
+	options := make([]discordgo.SelectMenuOption, len(characters))
+	for idx, char := range characters {
+		options[idx] = discordgo.SelectMenuOption{
+			Label: char.Name,
+			Value: char.ID,
+		}
+	}
+
+	// Create the response with the select menu
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Select a character:",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.SelectMenu{
+							CustomID:    "select_character",
+							Placeholder: "Choose a character",
+							Options:     options,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	log.Println("Handling new character")
+
+	char, err := c.charManager.Put(context.Background(), &entities.Character{
 		OwnerID: i.Member.User.ID,
 	})
 	if err != nil {
 		log.Println(err)
-
 		return // TODO: Handle error
 	}
 
+	initialState := &entities.CharacterCreation{
+		CharacterID: char.ID, // Use the generated UUID from the response
+		OwnerID:     i.Member.User.ID, // Set the OwnerID
+		LastToken:   i.Token,
+	}
 	_, err = c.charManager.SaveState(context.Background(), initialState)
 	if err != nil {
 		log.Println(err)
@@ -161,7 +203,6 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 	if err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 func (c *Character) renderCharacterCreate(s *discordgo.Session, i *discordgo.InteractionCreate, state *entities.CharacterCreation) error {
@@ -258,7 +299,13 @@ func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.Inter
 		return
 	}
 
-	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
+	char, err := c.charManager.Get(context.Background(), state.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return
@@ -272,15 +319,10 @@ func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.Inter
 	}
 
 	log.Println("Character Name", char.Name)
-	lastState, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
-	if err != nil {
-		log.Println(err)
-		return
-	}
 
 	oldInteraction := &discordgo.Interaction{
 		AppID: i.AppID,
-		Token: lastState.LastToken,
+		Token: state.LastToken,
 	}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
@@ -364,13 +406,13 @@ func (c *Character) initializeCharacter(charID string) error {
 }
 
 func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	existing, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	existing, err := c.charManager.Get(context.Background(), state.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
@@ -404,7 +446,8 @@ func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discord
 	}
 
 	_, err = c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
+		CharacterID: state.CharacterID, // Use the character ID from the state
+		OwnerID:     state.OwnerID,     // Ensure OwnerID is maintained
 		LastToken:   i.Token,
 		Step:        entities.CreateStepRoll,
 	})
@@ -429,10 +472,6 @@ func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discord
 		log.Println(err)
 		return
 	}
-	//
-	//log.Println("Character selected", char.ID)
-	//
-	//c.handleRollCharacter(s, i)
 }
 
 func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -446,8 +485,15 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
+	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
 	char, err := c.charManager.Put(context.Background(), &entities.Character{
-		OwnerID: i.Member.User.ID,
+		ID:      state.CharacterID, // Use the character ID from the state
+		OwnerID: state.OwnerID,     // Ensure OwnerID is maintained
 		Name:    i.Member.User.Username,
 		Race: &entities.Race{
 			Key: race,
@@ -468,7 +514,8 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	lastState, err := c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
+		CharacterID: state.CharacterID, // Use the character ID from the state
+		OwnerID:     state.OwnerID,     // Ensure OwnerID is maintained
 		LastToken:   i.Token,
 		Step:        entities.CreateStepRoll,
 	})

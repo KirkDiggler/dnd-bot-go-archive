@@ -145,6 +145,8 @@ func (c *Character) HandleInteractionCreate(s *discordgo.Session, i *discordgo.I
 					log.Println("create character")
 					c.handleNewCharacter(s, i)
 				}
+			case "list":
+				c.handleListCharacters(s, i)
 			}
 		}
 	case discordgo.InteractionModalSubmit:
@@ -261,7 +263,7 @@ func (c *Character) getAndUpdateState(input *entities.CharacterCreation) (*entit
 		return nil, dnderr.NewMissingParameterError("input")
 	}
 
-	existing, err := c.charManager.GetState(context.Background(), input.CharacterID)
+	existing, err := c.charManager.GetState(context.Background(), input.OwnerID)
 	if err != nil {
 		return nil, err
 	}
