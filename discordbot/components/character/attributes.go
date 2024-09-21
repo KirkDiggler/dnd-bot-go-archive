@@ -208,7 +208,9 @@ func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.Inter
 		return // TODO: Handle error
 	}
 
-	log.Println("Rolling for", i.Member.User.Username, "the ", char.Race.Name, " ", char.Class.Name)
+	log.Println("char: ", char.String())
+
+	log.Println("Rolling for", char.Name, "the ", char.Race.Key, " ", char.Class.Key)
 
 	_, err = c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: i.Member.User.ID,

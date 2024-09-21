@@ -71,12 +71,13 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 	for idx, choice := range selectedChoice.Options {
 		log.Println("choice: ", choice.GetKey(), " type: ", choice.GetOptionType())
 
-		if choice.GetOptionType() == entities.OptionTypeChoice {
+		switch choice.GetOptionType() {
+		case entities.OptionTypeChoice:
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
 				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
 			}
-		} else if choice.GetOptionType() == entities.OptionTypeMultiple {
+		case entities.OptionTypeMultiple:
 			display := strings.Builder{}
 			if multi, ok := choice.(*entities.MultipleOption); ok {
 				for _, option := range multi.Items {
@@ -88,7 +89,7 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 				Label: display.String(),
 				Value: fmt.Sprintf("%s:%s:%d", choice.GetOptionType(), choice.GetKey(), idx),
 			}
-		} else {
+		default:
 			options[idx] = discordgo.SelectMenuOption{
 				Label: choice.GetName(),
 				Value: fmt.Sprintf("%s:%s", choice.GetOptionType(), choice.GetKey()),
@@ -142,17 +143,16 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 			done = false
 			selectedChoiceIndex := -1
 
-			// here is where I would reload the options for a given choice option
 			for _, value := range i.MessageComponentData().Values {
 				parts := strings.Split(value, ":")
-				if parts[0] == string(entities.OptionTypeChoice) {
-					// get index and iteract through options, setting other indexes to inactive and this to active, feed back into choice
+				switch parts[0] {
+				case string(entities.OptionTypeChoice):
 					selectedChoiceIndex, err = strconv.Atoi(parts[2])
 					if err != nil {
 						log.Println(err)
 						return // TODO handle error
 					}
-				} else if parts[0] == string(entities.OptionTypeMultiple) {
+				case string(entities.OptionTypeMultiple):
 					index, err := strconv.Atoi(parts[2])
 					if err != nil {
 						log.Println(err)
@@ -180,9 +180,8 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 							return // TODO handle error
 						}
 					}
-				} else {
+				default:
 					log.Println("add equipment", parts)
-					// add equipment
 					char, err = c.charManager.AddInventory(context.Background(), char, parts[1])
 					if err != nil {
 						log.Println(err)
@@ -192,7 +191,6 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 			}
 			choice.Status = entities.ChoiceStatusSelected
 
-			// gross, but I need to get the last choice to set other options inactive
 			if selectedChoiceIndex >= 0 {
 				choice.Status = entities.ChoiceStatusActive
 				for idx, option := range choice.Options {

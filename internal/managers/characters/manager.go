@@ -2,6 +2,8 @@ package characters
 
 import (
 	"context"
+	"log"
+
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/encounter"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
@@ -216,6 +218,14 @@ func (m *manager) Put(ctx context.Context, character *entities.Character) (*enti
 	//if character.Class == nil {
 	//	return nil, dnderr.NewMissingParameterError("character.Class")
 	//}
+
+	if character.Race != nil {
+		log.Println("character race: ", character.Race.Key)
+	}
+
+	if character.Class != nil {
+		log.Println("character class: ", character.Class.Key)
+	}
 
 	data, err := m.charRepo.Put(ctx, character)
 	if err != nil {

@@ -73,7 +73,7 @@ func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.Intera
 		log.Println(err)
 	}
 
-	err = c.renderState(s, i, initialState)
+	err = c.renderCharacterCreate(s, i, initialState)
 	if err != nil {
 		log.Println(err)
 	}
@@ -89,7 +89,7 @@ func (c *Character) createRaceOptions() []discordgo.SelectMenuOption {
 	for idx, race := range races {
 		raceOptions[idx] = discordgo.SelectMenuOption{
 			Label: race.Name,
-			Value: fmt.Sprintf("race:%d:%s", idx, race.Key),
+			Value: race.Key,
 		}
 	}
 
@@ -106,7 +106,7 @@ func (c *Character) createClassOptions() []discordgo.SelectMenuOption {
 	for idx, class := range classes {
 		classOptions[idx] = discordgo.SelectMenuOption{
 			Label: class.Name,
-			Value: fmt.Sprintf("class:%d:%s", idx, class.Key),
+			Value: class.Key,
 		}
 	}
 
@@ -164,7 +164,7 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 
 }
 
-func (c *Character) renderState(s *discordgo.Session, i *discordgo.InteractionCreate, state *entities.CharacterCreation) error {
+func (c *Character) renderCharacterCreate(s *discordgo.Session, i *discordgo.InteractionCreate, state *entities.CharacterCreation) error {
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -239,15 +239,25 @@ func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.Inter
 	data := i.ModalSubmitData()
 	log.Println("Handling name character", data)
 	name := ""
-	for _, component := range i.ModalSubmitData().Components {
-		if actionRow, ok := component.(discordgo.ActionsRow); ok {
+	for _, component := range data.Components {
+		if actionRow, ok := component.(*discordgo.ActionsRow); ok {
 			for _, comp := range actionRow.Components {
 				if input, inputOK := comp.(*discordgo.TextInput); inputOK && input.CustomID == "input_name" {
 					name = input.Value
+					break
 				}
+			}
+			if name != "" {
+				break
 			}
 		}
 	}
+
+	if name == "" {
+		log.Println("Error: No name input found")
+		return
+	}
+
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
@@ -369,12 +379,14 @@ func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discord
 	data := i.MessageComponentData()
 	selection := data.Values[0] // Assuming single selection
 
+	log.Println("Selection", selection)
+
 	// Store the selection based on the CustomID
 	switch data.CustomID {
-	case "select_race":
+	case "select-race":
 		state.Steps |= entities.SelectRaceStep
 		existing.Race = &entities.Race{Key: selection}
-	case "select_class":
+	case "select-class":
 		state.Steps |= entities.SelectClassStep
 		existing.Class = &entities.Class{Key: selection}
 	}
