@@ -21,6 +21,7 @@ type Data struct {
 	Rolls            []*RollData                  `json:"rolls"`
 	Proficiencies    []*Proficiency               `json:"proficiencies"`
 	Inventory        []*Equipment                 `json:"inventory"`
+	Status           entities.CharacterStatus     `json:"status"`
 }
 
 type RollData struct {

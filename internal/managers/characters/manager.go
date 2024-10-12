@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/encounter"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/choice"
 
@@ -213,8 +214,28 @@ func (m *manager) List(ctx context.Context, ownerID string, status ...entities.C
 		return nil, dnderr.NewMissingParameterError("ownerID")
 	}
 
-	characters, err := m.charRepo.ListByOwnerAndStatus(ctx, ownerID, status...)
+	charDatas, err := m.charRepo.ListByOwnerAndStatus(ctx, ownerID, status...)
 	if err != nil {
+		return nil, err
+	}
+
+	characters := make([]*entities.Character, len(charDatas))
+
+	// use characterFromData in gou routines to hydrate the characters"
+	g, gCtx := errgroup.WithContext(ctx)
+	for i := range charDatas {
+		i := i
+		g.Go(func() error {
+			char, err := m.characterFromData(gCtx, charDatas[i])
+			if err != nil {
+				return err
+			}
+			characters[i] = char
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -478,73 +499,4 @@ func (m *manager) IsCharacterCreationComplete(ctx context.Context, draftID strin
 	}
 
 	return draft.AllStepsCompleted(), nil
-}
-
-func (m *manager) AddProficiency(ctx context.Context, draft *entities.CharacterDraft, reference *entities.ReferenceItem) (*entities.CharacterDraft, error) {
-	if draft == nil {
-		return nil, dnderr.NewMissingParameterError("draft")
-	}
-
-	if draft.Character == nil {
-		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
-	}
-
-	if reference == nil {
-		return nil, dnderr.NewMissingParameterError("reference")
-	}
-
-	proficiency, err := m.client.GetProficiency(reference.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	draft.Character.AddProficiency(proficiency)
-	return m.UpdateDraft(ctx, draft)
-}
-
-func (m *manager) AddInventory(ctx context.Context, draft *entities.CharacterDraft, key string) (*entities.CharacterDraft, error) {
-	if draft == nil {
-		return nil, dnderr.NewMissingParameterError("draft")
-	}
-
-	if draft.Character == nil {
-		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
-	}
-
-	if key == "" {
-		return nil, dnderr.NewMissingParameterError("key")
-	}
-
-	equipment, err := m.client.GetEquipment(key)
-	if err != nil {
-		return nil, err
-	}
-
-	draft.Character.AddInventory(equipment)
-	return m.UpdateDraft(ctx, draft)
-}
-
-func (m *manager) characterFromData(ctx context.Context, char *entities.Character) (*entities.Character, error) {
-	// Implement the logic to hydrate the character with additional data
-	// This might involve fetching related data from other repositories or the client
-	// For example:
-	if char.Race != nil && char.Race.Key != "" {
-		raceData, err := m.client.GetRace(char.Race.Key)
-		if err != nil {
-			return nil, err
-		}
-		char.Race = raceData
-	}
-
-	if char.Class != nil && char.Class.Key != "" {
-		classData, err := m.client.GetClass(char.Class.Key)
-		if err != nil {
-			return nil, err
-		}
-		char.Class = classData
-	}
-
-	// Add more hydration logic as needed
-
-	return char, nil
 }
