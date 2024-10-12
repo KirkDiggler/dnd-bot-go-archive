@@ -15,6 +15,19 @@ func NewAlreadyExistsError(msg string) error {
 		Msg: msg,
 	}
 }
+type InvalidOperationError struct {
+	Msg string
+}
+
+func (e *InvalidOperationError) Error() string {
+	return e.Msg
+}
+
+func NewInvalidOperationError(msg string) error {
+	return &InvalidOperationError{
+		Msg: msg,
+	}
+}
 
 type MissingParameterError struct {
 	Param string

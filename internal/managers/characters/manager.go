@@ -3,6 +3,7 @@ package characters
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/encounter"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character"
+	"github.com/KirkDiggler/dnd-bot-go/internal/repositories/character_draft"
 )
 
 type manager struct {
@@ -22,6 +24,7 @@ type manager struct {
 	choiceRepo    choice.Repository
 	encounterRepo encounter.Repository
 	client        dnd5e.Client
+	draftRepo     character_draft.Repository
 }
 
 type Config struct {
@@ -30,6 +33,7 @@ type Config struct {
 	ChoiceRepo    choice.Repository
 	Client        dnd5e.Client
 	EncounterRepo encounter.Repository
+	DraftRepo     character_draft.Repository
 }
 
 func New(cfg *Config) (Manager, error) {
@@ -52,8 +56,13 @@ func New(cfg *Config) (Manager, error) {
 	if cfg.ChoiceRepo == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.ChoiceRepo")
 	}
+
 	if cfg.EncounterRepo == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.EncounterRepo")
+	}
+
+	if cfg.DraftRepo == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.DraftRepo")
 	}
 
 	return &manager{
@@ -62,6 +71,7 @@ func New(cfg *Config) (Manager, error) {
 		choiceRepo:    cfg.ChoiceRepo,
 		client:        cfg.Client,
 		encounterRepo: cfg.EncounterRepo,
+		draftRepo:     cfg.DraftRepo,
 	}, nil
 }
 
@@ -198,24 +208,14 @@ func (m *manager) GetChoices(ctx context.Context, characterID string, choiceType
 	return data.Choices, nil
 }
 
-func (m *manager) List(ctx context.Context, ownerID string) ([]*entities.Character, error) {
+func (m *manager) List(ctx context.Context, ownerID string, status ...entities.CharacterStatus) ([]*entities.Character, error) {
 	if ownerID == "" {
 		return nil, dnderr.NewMissingParameterError("ownerID")
 	}
 
-	dataList, err := m.charRepo.ListByOwner(ctx, ownerID)
+	characters, err := m.charRepo.ListByOwnerAndStatus(ctx, ownerID, status...)
 	if err != nil {
 		return nil, err
-	}
-
-	characters := make([]*entities.Character, len(dataList))
-	for idx, data := range dataList {
-		character, err := m.characterFromData(ctx, data)
-		if err != nil {
-			return nil, err
-		}
-
-		characters[idx] = character
 	}
 
 	return characters, nil
@@ -306,4 +306,245 @@ func (m *manager) GetState(ctx context.Context, characterID string) (*entities.C
 	}
 
 	return result, nil
+}
+
+func (m *manager) CreateDraft(ctx context.Context, ownerID string) (*entities.CharacterDraft, error) {
+	character := &entities.Character{
+		OwnerID: ownerID,
+		Status:  entities.CharacterStatusDraft,
+	}
+
+	savedChar, err := m.charRepo.Put(ctx, character)
+	if err != nil {
+		return nil, err
+	}
+
+	draft := &entities.CharacterDraft{
+		OwnerID:     ownerID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		CurrentStep: entities.SelectRaceStep,
+		Character:   savedChar,
+	}
+
+	result, err := m.draftRepo.Create(ctx, draft)
+	if err != nil {
+		// If there's an error, we should delete the character we just created
+		_ = m.charRepo.Delete(ctx, savedChar.ID)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *manager) GetDraft(ctx context.Context, draftID string) (*entities.CharacterDraft, error) {
+	if draftID == "" {
+		return nil, dnderr.NewMissingParameterError("draftID")
+	}
+
+	draft, err := m.draftRepo.Get(ctx, draftID)
+	if err != nil {
+		return nil, err
+	}
+
+	if draft.Character == nil {
+		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
+	}
+
+	hydratedCharacter, err := m.characterFromData(ctx, draft.Character)
+	if err != nil {
+		return nil, err
+	}
+
+	draft.Character = hydratedCharacter
+	return draft, nil
+}
+
+func (m *manager) UpdateDraft(ctx context.Context, draft *entities.CharacterDraft) (*entities.CharacterDraft, error) {
+	if draft == nil {
+		return nil, dnderr.NewMissingParameterError("draft")
+	}
+
+	if draft.ID == "" {
+		return nil, dnderr.NewMissingParameterError("draft.ID")
+	}
+
+	if draft.Character == nil {
+		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
+	}
+
+	draft.UpdatedAt = time.Now()
+
+	// Save the character
+	_, err := m.charRepo.Put(ctx, draft.Character)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the draft
+	result, err := m.draftRepo.Update(ctx, draft)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *manager) ListDrafts(ctx context.Context, ownerID string) ([]*entities.CharacterDraft, error) {
+	if ownerID == "" {
+		return nil, dnderr.NewMissingParameterError("ownerID")
+	}
+
+	drafts, err := m.draftRepo.ListByOwner(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return drafts, nil
+}
+
+func (m *manager) DeleteDraft(ctx context.Context, draftID string) error {
+	if draftID == "" {
+		return dnderr.NewMissingParameterError("draftID")
+	}
+
+	draft, err := m.draftRepo.Get(ctx, draftID)
+	if err != nil {
+		return err
+	}
+
+	if draft.Character == nil || draft.Character.ID == "" {
+		return dnderr.NewInvalidEntityError("Character is nil or has no ID in draft")
+	}
+
+	// Delete the associated character
+	err = m.charRepo.Delete(ctx, draft.Character.ID)
+	if err != nil {
+		return err
+	}
+
+	// Delete the draft
+	return m.draftRepo.Delete(ctx, draftID)
+}
+
+func (m *manager) ActivateCharacter(ctx context.Context, draftID string) error {
+	draft, err := m.GetDraft(ctx, draftID)
+	if err != nil {
+		return err
+	}
+
+	if !draft.AllStepsCompleted() {
+		return dnderr.NewInvalidOperationError("Cannot activate character: creation not complete")
+	}
+
+	draft.Character.Status = entities.CharacterStatusActive
+	_, err = m.charRepo.Put(ctx, draft.Character)
+	if err != nil {
+		return err
+	}
+
+	// Delete the draft after activating the character
+	return m.DeleteDraft(ctx, draftID)
+}
+
+func contains(slice []entities.CharacterStatus, value entities.CharacterStatus) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+// Add a new function to complete a step
+func (m *manager) CompleteStep(ctx context.Context, draftID string, step entities.CreateStep) error {
+	draft, err := m.GetDraft(ctx, draftID)
+	if err != nil {
+		return err
+	}
+
+	draft.CompleteStep(step)
+	draft.UpdatedAt = time.Now()
+
+	_, err = m.draftRepo.Update(ctx, draft)
+	return err
+}
+
+// Add a new function to check if all steps are completed
+func (m *manager) IsCharacterCreationComplete(ctx context.Context, draftID string) (bool, error) {
+	draft, err := m.GetDraft(ctx, draftID)
+	if err != nil {
+		return false, err
+	}
+
+	return draft.AllStepsCompleted(), nil
+}
+
+func (m *manager) AddProficiency(ctx context.Context, draft *entities.CharacterDraft, reference *entities.ReferenceItem) (*entities.CharacterDraft, error) {
+	if draft == nil {
+		return nil, dnderr.NewMissingParameterError("draft")
+	}
+
+	if draft.Character == nil {
+		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
+	}
+
+	if reference == nil {
+		return nil, dnderr.NewMissingParameterError("reference")
+	}
+
+	proficiency, err := m.client.GetProficiency(reference.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	draft.Character.AddProficiency(proficiency)
+	return m.UpdateDraft(ctx, draft)
+}
+
+func (m *manager) AddInventory(ctx context.Context, draft *entities.CharacterDraft, key string) (*entities.CharacterDraft, error) {
+	if draft == nil {
+		return nil, dnderr.NewMissingParameterError("draft")
+	}
+
+	if draft.Character == nil {
+		return nil, dnderr.NewInvalidEntityError("Character is nil in draft")
+	}
+
+	if key == "" {
+		return nil, dnderr.NewMissingParameterError("key")
+	}
+
+	equipment, err := m.client.GetEquipment(key)
+	if err != nil {
+		return nil, err
+	}
+
+	draft.Character.AddInventory(equipment)
+	return m.UpdateDraft(ctx, draft)
+}
+
+func (m *manager) characterFromData(ctx context.Context, char *entities.Character) (*entities.Character, error) {
+	// Implement the logic to hydrate the character with additional data
+	// This might involve fetching related data from other repositories or the client
+	// For example:
+	if char.Race != nil && char.Race.Key != "" {
+		raceData, err := m.client.GetRace(char.Race.Key)
+		if err != nil {
+			return nil, err
+		}
+		char.Race = raceData
+	}
+
+	if char.Class != nil && char.Class.Key != "" {
+		classData, err := m.client.GetClass(char.Class.Key)
+		if err != nil {
+			return nil, err
+		}
+		char.Class = classData
+	}
+
+	// Add more hydration logic as needed
+
+	return char, nil
 }

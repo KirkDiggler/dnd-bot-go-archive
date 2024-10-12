@@ -97,25 +97,13 @@ func (c *Character) handleListCharacters(s *discordgo.Session, i *discordgo.Inte
 func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	log.Println("Handling new character")
 
-	char, err := c.charManager.Put(context.Background(), &entities.Character{
-		OwnerID: i.Member.User.ID,
-	})
+	draft, err := c.charManager.CreateDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	initialState := &entities.CharacterCreation{
-		CharacterID: char.ID, // Use the generated UUID from the response
-		OwnerID:     i.Member.User.ID, // Set the OwnerID
-		LastToken:   i.Token,
-	}
-	_, err = c.charManager.SaveState(context.Background(), initialState)
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = c.renderCharacterCreate(s, i, initialState)
+	err = c.renderCharacterCreate(s, i, draft)
 	if err != nil {
 		log.Println(err)
 	}
@@ -164,13 +152,10 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 		return
 	}
 
-	_, err = c.charManager.SaveState(context.Background(), &entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
-		LastToken:   i.Token,
-		Step:        entities.CreateStepSelect,
-	})
+	draft, err := c.charManager.CreateDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
+		return // TODO: Handle error
 	}
 
 	components := make([]discordgo.SelectMenuOption, len(choices))
@@ -189,7 +174,6 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.SelectMenu{
-							// Select menu, as other components, must have a customID, so we set it to this value.
 							CustomID:    selectCaracterAction,
 							Placeholder: "This is the tale of...👇",
 							Options:     components,
@@ -205,7 +189,7 @@ func (c *Character) handleRandomStart(s *discordgo.Session, i *discordgo.Interac
 	}
 }
 
-func (c *Character) renderCharacterCreate(s *discordgo.Session, i *discordgo.InteractionCreate, state *entities.CharacterCreation) error {
+func (c *Character) renderCharacterCreate(s *discordgo.Session, i *discordgo.InteractionCreate, draft *entities.CharacterDraft) error {
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{

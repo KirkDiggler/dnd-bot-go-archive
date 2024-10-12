@@ -110,20 +110,16 @@ func (c *Character) generateStartingEquipmentChoices(char *entities.Character, c
 }
 
 func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	state, err := c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
-		LastToken:   i.Token,
-		Step:        entities.CreateStepEquipment,
-	})
+	draft, err := c.charManager.GetDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
-		return // TODO handle error
+		return // TODO: Handle error
 	}
 
-	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	char, err := c.charManager.Get(context.Background(), draft.CharacterID)
 	if err != nil {
 		log.Println(err)
-		return // TODO handle error
+		return // TODO: Handle error
 	}
 
 	choices, err := c.charManager.GetChoices(context.Background(), char.ID, entities.ChoiceTypeEquipment)
@@ -224,9 +220,15 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 		return // TODO handle error
 	}
 
+	_, err = c.charManager.UpdateDraft(context.Background(), draft, char)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
 	oldInteraction := &discordgo.Interaction{
 		AppID: i.AppID,
-		Token: state.LastToken,
+		Token: draft.LastToken,
 	}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
@@ -254,17 +256,13 @@ func (c *Character) handleEquipmentSelect(s *discordgo.Session, i *discordgo.Int
 }
 
 func (c *Character) handleEquipmentStep(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
+	draft, err := c.charManager.GetDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
-		return // TODO handle error
+		return // TODO: Handle error
 	}
 
-	state, err := c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: i.Member.User.ID,
-		LastToken:   i.Token,
-		Step:        entities.CreateStepEquipment,
-	})
+	char, err := c.charManager.Get(context.Background(), draft.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
@@ -272,7 +270,7 @@ func (c *Character) handleEquipmentStep(s *discordgo.Session, i *discordgo.Inter
 
 	var startingEquipementChoices []*entities.Choice
 
-	if state.Step == entities.CreateStepProficiency {
+	if draft.Step == entities.CreateStepProficiency {
 		log.Println("getting starting equipment choices ", char.Class.StartingEquipmentChoices)
 		startingEquipementChoices = char.Class.StartingEquipmentChoices
 	} else {

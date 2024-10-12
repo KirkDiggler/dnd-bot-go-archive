@@ -28,15 +28,13 @@ func rollAttributes() ([]*dice.RollResult, error) {
 
 // Setting Attributes
 func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.InteractionCreate, attribute string, selectSlice []string) {
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	draft, err := c.charManager.GetDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	log.Println("state: ", state.String())
-
-	char, err := c.charManager.Get(context.Background(), state.CharacterID)
+	char, err := c.charManager.Get(context.Background(), draft.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
@@ -65,6 +63,12 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		return // TODO: Handle error
 	}
 
+	_, err = c.charManager.UpdateDraft(context.Background(), draft, char)
+	if err != nil {
+		log.Println(err)
+		return // TODO: Handle error
+	}
+
 	rolls := char.Rolls
 	attributeSelectData, err := c.generateAttributeSelect(char, rolls, i)
 	done := false
@@ -82,7 +86,7 @@ func (c *Character) handleAttributeSelect(s *discordgo.Session, i *discordgo.Int
 		msgBuilder.WriteString(fmt.Sprintf("%d, ", roll.Total-roll.Lowest))
 	}
 
-	state, err = c.getAndUpdateState(&entities.CharacterCreation{
+	state, err := c.getAndUpdateState(&entities.CharacterCreation{
 		CharacterID: char.ID,
 		OwnerID:     i.Member.User.ID,
 		LastToken:   i.Token,
@@ -210,13 +214,13 @@ func (c *Character) generateAttributeSelect(char *entities.Character, rolls []*d
 }
 
 func (c *Character) handleRollCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	draft, err := c.charManager.GetDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	char, err := c.charManager.Get(context.Background(), state.CharacterID)
+	char, err := c.charManager.Get(context.Background(), draft.CharacterID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error

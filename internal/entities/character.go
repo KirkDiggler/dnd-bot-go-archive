@@ -20,6 +20,14 @@ const (
 	SlotNone      Slot = "none"
 )
 
+type CharacterStatus string
+
+const (
+	CharacterStatusDraft   CharacterStatus = "draft"
+	CharacterStatusActive  CharacterStatus = "active"
+	CharacterStatusArchived CharacterStatus = "archived"
+)
+
 type Character struct {
 	ID                 string
 	OwnerID            string
@@ -42,6 +50,8 @@ type Character struct {
 	NextLevel        int
 
 	EquippedSlots map[Slot]Equipment
+
+	Status CharacterStatus `json:"status"`
 
 	mu sync.Mutex
 }
