@@ -283,30 +283,26 @@ func (c *Character) handleNameCharacter(s *discordgo.Session, i *discordgo.Inter
 		return
 	}
 
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	session, err := c.sessionManager.GetWithDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	char, err := c.charManager.Get(context.Background(), state.CharacterID)
+	draft := session.Draft
+
+	draft.Character.Name = name
+	_, err = c.charManager.UpdateDraft(context.Background(), draft)
 	if err != nil {
 		log.Println(err)
-		return
+		return // TODO: Handle error
 	}
 
-	char.Name = name
-	_, err = c.charManager.Put(context.Background(), char)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	log.Println("Character Name", char.Name)
+	log.Println("Character Name", draft.Character.Name)
 
 	oldInteraction := &discordgo.Interaction{
 		AppID: i.AppID,
-		Token: state.LastToken,
+		Token: session.LastToken,
 	}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
@@ -390,58 +386,35 @@ func (c *Character) initializeCharacter(charID string) error {
 }
 
 func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	session, err := c.sessionManager.GetWithDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	existing, err := c.charManager.Get(context.Background(), state.CharacterID)
-	if err != nil {
-		log.Println(err)
-		return // TODO: Handle error
-	}
+	draft := session.Draft
 
 	data := i.MessageComponentData()
 	selection := data.Values[0] // Assuming single selection
 
-	log.Println("Selection", selection)
-
 	// Store the selection based on the CustomID
 	switch data.CustomID {
 	case "select-race":
-		state.Steps |= entities.SelectRaceStep
-		existing.Race = &entities.Race{Key: selection}
+		draft.CompleteStep(entities.SelectRaceStep)
+		draft.Character.Race = &entities.Race{Key: selection}
 	case "select-class":
-		state.Steps |= entities.SelectClassStep
-		existing.Class = &entities.Class{Key: selection}
+		draft.CompleteStep(entities.SelectClassStep)
+		draft.Character.Class = &entities.Class{Key: selection}
 	}
 
-	char, err := c.charManager.Put(context.Background(), existing)
+	_, err = c.charManager.UpdateDraft(context.Background(), draft)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	_, err = c.charManager.SaveState(context.Background(), state)
-	if err != nil {
-		log.Println(err)
-		return // TODO: Handle error
-	}
-
-	_, err = c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: state.CharacterID, // Use the character ID from the state
-		OwnerID:     state.OwnerID,     // Ensure OwnerID is maintained
-		LastToken:   i.Token,
-		Step:        entities.CreateStepRoll,
-	})
-	if err != nil {
-		log.Println(err)
-		return // TODO handle error
-	}
-
-	if state.Steps&entities.SelectRaceStep != 0 && state.Steps&entities.SelectClassStep != 0 {
-		err = c.initializeCharacter(char.ID)
+	if draft.AllStepsCompleted() {
+		err = c.initializeCharacter(draft.Character.ID)
 		if err != nil {
 			log.Println(err)
 			return // TODO handle error
@@ -469,40 +442,25 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 	race := selectString[2]
 	class := selectString[3]
 
-	state, err := c.charManager.GetState(context.Background(), i.Member.User.ID)
+	session, err := c.sessionManager.GetWithDraft(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO: Handle error
 	}
 
-	char, err := c.charManager.Put(context.Background(), &entities.Character{
-		ID:      state.CharacterID, // Use the character ID from the state
-		OwnerID: state.OwnerID,     // Ensure OwnerID is maintained
-		Name:    i.Member.User.Username,
-		Race: &entities.Race{
-			Key: race,
-		},
-		Class: &entities.Class{
-			Key: class,
-		},
-	})
+	draft := session.Draft
+
+	draft.Character.Name = i.Member.User.Username
+	draft.Character.Race = &entities.Race{Key: race}
+	draft.Character.Class = &entities.Class{Key: class}
+
+	_, err = c.charManager.UpdateDraft(context.Background(), draft)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
 	}
 
-	err = c.initializeCharacter(char.ID)
-	if err != nil {
-		log.Println(err)
-		return // TODO handle error
-	}
-
-	lastState, err := c.getAndUpdateState(&entities.CharacterCreation{
-		CharacterID: state.CharacterID, // Use the character ID from the state
-		OwnerID:     state.OwnerID,     // Ensure OwnerID is maintained
-		LastToken:   i.Token,
-		Step:        entities.CreateStepRoll,
-	})
+	err = c.initializeCharacter(draft.Character.ID)
 	if err != nil {
 		log.Println(err)
 		return // TODO handle error
@@ -510,7 +468,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 
 	oldInteraction := &discordgo.Interaction{
 		AppID: i.AppID,
-		Token: lastState.LastToken,
+		Token: session.LastToken,
 	}
 	err = s.InteractionResponseDelete(oldInteraction)
 	if err != nil {
@@ -518,7 +476,7 @@ func (c *Character) handleCharSelect(s *discordgo.Session, i *discordgo.Interact
 		return // TODO handle error
 	}
 
-	log.Println("Character selected", char.ID)
+	log.Println("Character selected", draft.Character.ID)
 
 	c.handleRollCharacter(s, i)
 }

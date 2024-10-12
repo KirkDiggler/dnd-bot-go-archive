@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-go/internal/managers/characters"
+	"github.com/KirkDiggler/dnd-bot-go/internal/managers/session"
 
 	"github.com/KirkDiggler/dnd-bot-go/dnderr"
 	"github.com/KirkDiggler/dnd-bot-go/internal/entities"
@@ -30,13 +31,15 @@ const (
 )
 
 type Character struct {
-	client      dnd5e.Client
-	charManager characters.Manager
+	client         dnd5e.Client
+	charManager    characters.Manager
+	sessionManager session.Manager
 }
 
 type CharacterConfig struct {
 	Client           dnd5e.Client
 	CharacterManager characters.Manager
+	SessionManager   session.Manager
 }
 
 type charChoice struct {
@@ -57,9 +60,15 @@ func NewCharacter(cfg *CharacterConfig) (*Character, error) {
 	if cfg.CharacterManager == nil {
 		return nil, dnderr.NewMissingParameterError("cfg.CharacterManager")
 	}
+
+	if cfg.SessionManager == nil {
+		return nil, dnderr.NewMissingParameterError("cfg.SessionManager")
+	}
+
 	return &Character{
-		client:      cfg.Client,
-		charManager: cfg.CharacterManager,
+		client:         cfg.Client,
+		charManager:    cfg.CharacterManager,
+		sessionManager: cfg.SessionManager,
 	}, nil
 }
 
@@ -257,81 +266,6 @@ func (c *Character) getNextChoiceOption(input *entities.Choice) (*entities.Choic
 	return nil, dnderr.NewResourceExhaustedError("no active choice")
 }
 
-// Gets the current state for returning before setting the input state
-func (c *Character) getAndUpdateState(input *entities.CharacterCreation) (*entities.CharacterCreation, error) {
-	if input == nil {
-		return nil, dnderr.NewMissingParameterError("input")
-	}
-
-	existing, err := c.charManager.GetState(context.Background(), input.OwnerID)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = c.charManager.SaveState(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	return existing, nil
-}
-
-func (c *Character) handleNewCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Println("Handling new character")
-
-	draft, err := c.charManager.CreateDraft(context.Background(), i.Member.User.ID)
-	if err != nil {
-		log.Println(err)
-		return // TODO: Handle error
-	}
-
-	err = c.renderCharacterCreate(s, i, draft)
-	if err != nil {
-		log.Println(err)
-	}
-}
-
-func (c *Character) renderCharacterCreate(s *discordgo.Session, i *discordgo.InteractionCreate, draft *entities.CharacterDraft) error {
-	response := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Create your character:",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							CustomID:    selectRaceAction,
-							Placeholder: "Select your race",
-							Options:     c.createRaceOptions(),
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							CustomID:    selectClassAction,
-							Placeholder: "Select your class",
-							Options:     c.createClassOptions(),
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							CustomID: submitCharacterStart,
-							Label:    "Submit",
-							Style:    discordgo.PrimaryButton,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return s.InteractionRespond(i.Interaction, response)
-}
-
 func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
@@ -352,6 +286,12 @@ func (c *Character) handleDisplayCharacter(s *discordgo.Session, i *discordgo.In
 		return
 	}
 
+	// Update the last token in the session
+	err = c.sessionManager.UpdateLastToken(context.Background(), i.Member.User.ID, i.Token)
+	if err != nil {
+		log.Println("Failed to update last token:", err)
+		// Note: We don't return here as the main interaction was successful
+	}
 }
 
 func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -380,35 +320,60 @@ func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.Inter
 		return
 	}
 
+	// Update the last token in the session
+	err = c.sessionManager.UpdateLastToken(context.Background(), i.Member.User.ID, i.Token)
+	if err != nil {
+		log.Println("Failed to update last token:", err)
+		// Note: We don't return here as the main interaction was successful
+	}
 }
 
-func (c *Character) handleRaceAndClassSelection(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	draft, err := c.charManager.GetDraft(context.Background(), i.Member.User.ID)
+func (c *Character) handleLoadCharacter(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	char, err := c.charManager.Get(context.Background(), i.Member.User.ID)
 	if err != nil {
 		log.Println(err)
-		return // TODO: Handle error
+		return // TODO handle error
 	}
 
-	data := i.MessageComponentData()
-	selection := data.Values[0] // Assuming single selection
-
-	log.Println("Selection", selection)
-
-	// Store the selection based on the CustomID
-	switch data.CustomID {
-	case "select-race":
-		draft.CompleteStep(entities.SelectRaceStep)
-		draft.Character.Race = &entities.Race{Key: selection}
-	case "select-class":
-		draft.CompleteStep(entities.SelectClassStep)
-		draft.Character.Class = &entities.Class{Key: selection}
+	if char.Race == nil || char.Class == nil {
+		log.Println("Character not fully loaded")
+		return // TODO handle error
 	}
 
-	_, err = c.charManager.UpdateDraft(context.Background(), draft)
+	response := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Loaded character %s the %s %s", char.Name, char.Race.Name, char.Class.Name),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	}
+
+	err = s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Println(err)
-		return // TODO: Handle error
+		return
 	}
 
-	// ... rest of the method ...
+	// Update the last token in the session
+	err = c.sessionManager.UpdateLastToken(context.Background(), i.Member.User.ID, i.Token)
+	if err != nil {
+		log.Println("Failed to update last token:", err)
+		// Note: We don't return here as the main interaction was successful
+	}
+}
+
+session, err := c.sessionManager.GetWithDraft(context.Background(), i.Member.User.ID)
+if err != nil {
+	log.Println(err)
+	return // TODO: Handle error
+}
+
+oldInteraction := &discordgo.Interaction{
+	AppID: i.AppID,
+	Token: session.LastToken,
+}
+err = s.InteractionResponseDelete(oldInteraction)
+if err != nil {
+	log.Println("Error deleting old interaction:", err)
+	// Handle error as appropriate
 }
