@@ -144,7 +144,7 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (r *redisRepo) ListByOwnerAndStatus(ctx context.Context, ownerID string, status ...entities.CharacterStatus) ([]*entities.Character, error) {
+func (r *redisRepo) ListByOwnerAndStatus(ctx context.Context, ownerID string, status ...entities.CharacterStatus) ([]*Data, error) {
 	if ownerID == "" {
 		return nil, dnderr.NewMissingParameterError("ownerID")
 	}
@@ -169,7 +169,7 @@ func (r *redisRepo) ListByOwnerAndStatus(ctx context.Context, ownerID string, st
 		return nil, err
 	}
 
-	characters := make([]*entities.Character, 0, len(characterIDs))
+	characters := make([]*Data, 0, len(characterIDs))
 	for _, id := range characterIDs {
 		char, err := r.Get(ctx, id)
 		if err != nil {
